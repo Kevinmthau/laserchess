@@ -23,20 +23,43 @@
 /* Winner banner */
 .winner-banner {
     position: absolute;
-    top: 50%;
+    top: 40%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 1000;
     background: rgba(255, 255, 255, 0.95);
-    padding: 20px 40px;
+    padding: 25px 60px 30px 60px;
     border-radius: 20px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     text-align: center;
+    min-width: 300px;
     
     h4 {
-        margin: 0;
+        margin: 0 0 20px 0;
         color: #333;
         font-size: 24px;
+    }
+    
+    .play-again-btn-inline {
+        background-color: #000000 !important;
+        color: white !important;
+        width: auto !important;
+        height: 45px !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        padding: 8px 20px !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+        margin-top: 5px !important;
+        
+        &:hover {
+            background-color: #333333 !important;
+            transform: scale(1.02);
+        }
+        
+        &:active {
+            background-color: #555555 !important;
+        }
     }
 }
 

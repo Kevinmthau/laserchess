@@ -147,6 +147,25 @@ const gameSlice = createSlice({
          */
         resume: (state) => {
             state.status = GameStatusEnum.PLAYING;
+        },
+
+        /**
+         * Reset the game to initial state
+         */
+        resetGame: (state) => {
+            const newBoard = new Board().serialize();
+            state.sn = DEFAULT_BOARD_SN;
+            state.currentPlayer = PlayerTypesEnum.BLUE;
+            state.status = GameStatusEnum.PLAYING;
+            state.winner = "";
+            state.squares = newBoard.squares;
+            state.selectedPieceLocation = null;
+            state.movementIsLocked = false;
+            state.laser = {
+                route: [],
+                finalLocation: null,
+                finalActionType: null
+            };
         }
     }
 });
@@ -162,6 +181,7 @@ export const {
     applyMovement,
     selectPiece,
     unselectPiece,
+    resetGame,
 } = gameSlice.actions;
 
 

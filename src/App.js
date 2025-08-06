@@ -7,7 +7,7 @@ import LogoPNG from "./assets/logo.png";
 import BluePlayerProfile from "./assets/ui/blue-player-profile.png";
 import RedPlayerProfile from "./assets/ui/red-player-profile.png";
 import { Provider, ReactReduxContext, useDispatch, useSelector } from "react-redux";
-import { setBoardType, applyMovement, finishMovement, unselectPiece } from "./redux/slices/gameSlice";
+import { setBoardType, applyMovement, finishMovement, unselectPiece, resetGame } from "./redux/slices/gameSlice";
 import { MovementTypesEnum, PlayerTypesEnum } from "./models/Enums";
 import Board from "./models/Board";
 import { IconButton } from "@material-ui/core";
@@ -91,6 +91,12 @@ function App() {
 			{winner && (
 				<div className="winner-banner">
 					<h4>🎉 {winner.toUpperCase()} player wins!</h4>
+					<IconButton 
+						className="lc-btn-control play-again-btn-inline"
+						onClick={() => dispatch(resetGame())}
+						aria-label="play again">
+						🔄 Play Again
+					</IconButton>
 				</div>
 			)}
 
