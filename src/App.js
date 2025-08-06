@@ -7,7 +7,7 @@ import LogoPNG from "./assets/logo.png";
 import BluePlayerProfile from "./assets/ui/blue-player-profile.png";
 import RedPlayerProfile from "./assets/ui/red-player-profile.png";
 import { Provider, ReactReduxContext, useDispatch, useSelector } from "react-redux";
-import { setBoardType, applyMovement, computeAIMovement, toggleAI, finishMovement, unselectPiece } from "./redux/slices/gameSlice";
+import { setBoardType, applyMovement, finishMovement, unselectPiece } from "./redux/slices/gameSlice";
 import { MovementTypesEnum, PlayerTypesEnum } from "./models/Enums";
 import Board from "./models/Board";
 import { IconButton } from "@material-ui/core";
@@ -21,9 +21,6 @@ function App() {
 
 	// The stage width. This is dynamic, and changes on window resize.
 	const [stageWidth, setStageWidth] = useState(700);
-
-	const aiEnabled = useSelector(state => state.game.ai.enabled);
-	const aiMovement = useSelector(state => state.game.ai.movement);
 
 	const selectedPieceLocation = useSelector(state => state.game.selectedPieceLocation);
 	const currentPlayer = useSelector(state => state.game.currentPlayer); // It's blue by default!
@@ -87,26 +84,6 @@ function App() {
 	}, [dispatch, laser.route]);
 
 
-	useEffect(() => {
-		if (currentPlayer === PlayerTypesEnum.RED && aiEnabled) {
-			// Perform the move as AI
-			// Apply the new move to the board state.
-			dispatch(computeAIMovement());
-		}
-	}, [currentPlayer, aiEnabled, dispatch]);
-
-	useEffect(() => {
-		if (aiMovement) {
-			// If the ai is moving, perform the movement animation
-			Board.presentPieceMovement(stagePiecesRef, aiMovement, getCellSize());
-
-			// Apply the ai movement on the board state
-			setTimeout(() => {
-				dispatch(applyMovement({ movement: aiMovement }));
-			}, 332);
-		}
-	}, [dispatch, aiMovement, getCellSize]);
-
 
 	// Renderers
 	return (
@@ -125,7 +102,7 @@ function App() {
 						<h4 className={currentPlayer === PlayerTypesEnum.RED ? "text-danger" : "text-muted"}>
 							Red Player
 						</h4>
-						{currentPlayer === PlayerTypesEnum.RED && !aiEnabled && (
+						{currentPlayer === PlayerTypesEnum.RED && (
 							<span className="badge rounded-pill bg-dark text-light">Your turn</span>
 						)}
 					</div>
@@ -162,18 +139,6 @@ function App() {
 							aria-label="rotate piece right">
 							<RotateRightIcon />
 						</IconButton>
-					</div>
-					<div className="ai-toggle">
-						<label className="form-check-label fw-bold" htmlFor="aiModeSwitch">AI</label>
-						<input 
-							checked={aiEnabled}
-							onChange={(e) => {
-								dispatch(toggleAI());
-							}}
-							className="form-check-input"
-							type="checkbox"
-							id="aiModeSwitch" 
-						/>
 					</div>
 				</div>
 			</div>

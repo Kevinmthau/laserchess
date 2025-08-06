@@ -1,7 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { PlayerTypesEnum, GameStatusEnum } from "../../models/Enums";
 import Board from "../../models/Board";
-import AI from "../../utils/ai/AI";
 
 /** 
  * The default board setup (ACE).
@@ -24,11 +23,6 @@ const gameSlice = createSlice({
 
         selectedPieceLocation: null, // keeps track of the location where the selected piece is. It is NULL when no piece is selected.
         movementIsLocked: false, // when true, no player can move any piece. Usually becomes true when the laser is triggered and changing to another piece
-
-        ai: {
-            enabled: true, // is ai mode enabled?
-            movement: null // the ai movement to be made
-        },
 
         laser: {
             route: [],
@@ -75,35 +69,9 @@ const gameSlice = createSlice({
             const lastLaserRoutePath = route[route.length - 1];
             state.laser.finalActionType = lastLaserRoutePath.actionType;
             state.laser.finalLocation = lastLaserRoutePath.location;
-
-            if (state.ai.movement) {
-                state.ai.movement = null; // resets the ai movement
-            }
         },
 
 
-        /**
-         * Compute the next move for the AI based on current board state.
-         * Sets the serialized computed movement to state.movement
-         */
-        computeAIMovement: (state) => {
-            const newBoard = new Board({ squares: state.squares });
-
-            // Using minimax determine the optimal move for the ai.
-            const ai = new AI();
-            const movement = ai.computeMove(newBoard, PlayerTypesEnum.RED);
-            state.ai.movement = movement.serialize();
-            state.movementIsLocked = true;
-        },
-
-
-        /**
-         * 
-         * @param {*} state 
-         */
-        toggleAI: (state) => {
-            state.ai.enabled = !state.ai.enabled;
-        },
 
         /**
          * Finishes the current player move.
@@ -192,8 +160,6 @@ export const {
     resume,
     setBoardType,
     applyMovement,
-    computeAIMovement,
-    toggleAI,
     selectPiece,
     unselectPiece,
 } = gameSlice.actions;
