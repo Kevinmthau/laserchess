@@ -9,7 +9,6 @@ import Board from "../models/Board";
 import BlueBurglarSVG from "../assets/pieces/blue-burglar.svg";
 import RedBurglarSVG from "../assets/pieces/red-burglar.svg";
 import {
-	ACTIVE_BOARD_ROWS,
 	ACTIVE_BOARD_COL_OFFSET,
 	ACTIVE_BOARD_ROW_OFFSET,
 	VISUAL_BOARD_COLS,
@@ -91,7 +90,7 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 				const minX = Location.getX(-ACTIVE_BOARD_COL_OFFSET, cellSize);
 				const maxX = Location.getX(VISUAL_BOARD_COLS - ACTIVE_BOARD_COL_OFFSET - 1, cellSize);
 				const minY = Location.getY(-ACTIVE_BOARD_ROW_OFFSET, cellSize);
-				const maxY = Location.getY(ACTIVE_BOARD_ROWS - ACTIVE_BOARD_ROW_OFFSET - 1, cellSize);
+				const maxY = Location.getY(VISUAL_BOARD_ROWS - ACTIVE_BOARD_ROW_OFFSET - 1, cellSize);
 				const newX = pos.x > maxX ? maxX : pos.x < minX ? minX : pos.x;
 				const newY = pos.y > maxY ? maxY : pos.y < minY ? minY : pos.y;
 				return {

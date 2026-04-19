@@ -10,6 +10,14 @@ import LaserPath from "./LaserPath";
 import { point, polygon } from "@turf/helpers";
 import isPointInPolygon from "@turf/boolean-point-in-polygon";
 import { pieceAnimDuration, pieceAnimEasing } from "../components/BoardPiece";
+import {
+    ACTIVE_BOARD_COL_OFFSET,
+    ACTIVE_BOARD_COLS,
+    ACTIVE_BOARD_ROW_OFFSET,
+    ACTIVE_BOARD_ROWS,
+    VISUAL_BOARD_COLS,
+    VISUAL_BOARD_ROWS
+} from "../constants/boardLayout";
 
 
 /**
@@ -23,13 +31,48 @@ export const DIAMOND_GOAL_ANS = Object.freeze(["e5", "f5", "e4", "f4"]);
 const DIAMOND_GOAL_SET = new Set(DIAMOND_GOAL_ANS);
 export const isDiamondGoalLocation = (location) => Boolean(location && DIAMOND_GOAL_SET.has(location.an));
 
+const VISUAL_MIN_COL_INDEX = -ACTIVE_BOARD_COL_OFFSET;
+const VISUAL_MAX_COL_INDEX = VISUAL_BOARD_COLS - ACTIVE_BOARD_COL_OFFSET - 1;
+const VISUAL_MIN_ROW_INDEX = -ACTIVE_BOARD_ROW_OFFSET;
+const VISUAL_MAX_ROW_INDEX = VISUAL_BOARD_ROWS - ACTIVE_BOARD_ROW_OFFSET - 1;
+
+export const RED_LASER_LOCATION = Object.freeze(new Location(VISUAL_MIN_COL_INDEX, VISUAL_MIN_ROW_INDEX).serialize());
+export const BLUE_LASER_LOCATION = Object.freeze(new Location(VISUAL_MAX_COL_INDEX, VISUAL_MAX_ROW_INDEX).serialize());
 export const RED_HIDEOUT_LOCATION = Object.freeze(new Location(-2, 5).serialize());
 export const BLUE_HIDEOUT_LOCATION = Object.freeze(new Location(12, 3).serialize());
 
+const RED_LASER_HOME_LOCATION = Object.freeze(Location.fromAN("a8").serialize());
+const BLUE_LASER_HOME_LOCATION = Object.freeze(Location.fromAN("j1").serialize());
 const RED_HIDEOUT_ENTRY = Object.freeze(Location.fromAN("a3").serialize());
 const BLUE_HIDEOUT_ENTRY = Object.freeze(Location.fromAN("j5").serialize());
 
 const locationKey = (location) => `${location.colIndex},${location.rowIndex}`;
+const RED_HIDEOUT_KEY = locationKey(RED_HIDEOUT_LOCATION);
+const BLUE_HIDEOUT_KEY = locationKey(BLUE_HIDEOUT_LOCATION);
+const BLOCKED_VISUAL_KEYS = new Set([
+    locationKey(RED_LASER_LOCATION),
+    locationKey(BLUE_LASER_LOCATION),
+    RED_HIDEOUT_KEY,
+    BLUE_HIDEOUT_KEY,
+    locationKey(new Location(VISUAL_MIN_COL_INDEX, 7).serialize()),
+    locationKey(new Location(VISUAL_MAX_COL_INDEX, 1).serialize())
+]);
+const isWithinActiveBoard = (location) => (
+    location.colIndex >= 0 &&
+    location.colIndex < ACTIVE_BOARD_COLS &&
+    location.rowIndex >= 0 &&
+    location.rowIndex < ACTIVE_BOARD_ROWS
+);
+const isWithinVisualBoard = (location) => (
+    location.colIndex >= VISUAL_MIN_COL_INDEX &&
+    location.colIndex <= VISUAL_MAX_COL_INDEX &&
+    location.rowIndex >= VISUAL_MIN_ROW_INDEX &&
+    location.rowIndex <= VISUAL_MAX_ROW_INDEX
+);
+const isHideoutLocation = (location) => {
+    const key = locationKey(location);
+    return key === RED_HIDEOUT_KEY || key === BLUE_HIDEOUT_KEY;
+};
 
 const HIDEOUT_CONNECTIONS = Object.freeze({
     [locationKey(RED_HIDEOUT_LOCATION)]: [locationKey(RED_HIDEOUT_ENTRY)],
@@ -38,18 +81,76 @@ const HIDEOUT_CONNECTIONS = Object.freeze({
     [locationKey(BLUE_HIDEOUT_ENTRY)]: [locationKey(BLUE_HIDEOUT_LOCATION)]
 });
 
-const createDefaultOffboardPieces = () => ([
-    new Square(
-        SquareTypesEnum.HIDEOUT_RED,
-        new Piece("k", 0).serialize(),
-        cloneDeep(RED_HIDEOUT_LOCATION)
-    ).serialize(),
-    new Square(
-        SquareTypesEnum.HIDEOUT_BLUE,
-        new Piece("K", 0).serialize(),
-        cloneDeep(BLUE_HIDEOUT_LOCATION)
-    ).serialize()
-]);
+const extractLaserPiece = (squares, location) => {
+    const square = squares[location.rowIndex]?.[location.colIndex];
+    if (!SquareUtils.hasPiece(square) || square.piece.type !== PieceTypesEnum.LASER) {
+        return null;
+    }
+
+    const piece = cloneDeep(square.piece);
+    square.piece = null;
+    return piece;
+};
+
+const createOuterRingSquares = () => {
+    const outerRingSquares = [];
+
+    for (let rowIndex = VISUAL_MIN_ROW_INDEX; rowIndex <= VISUAL_MAX_ROW_INDEX; rowIndex += 1) {
+        for (let colIndex = VISUAL_MIN_COL_INDEX; colIndex <= VISUAL_MAX_COL_INDEX; colIndex += 1) {
+            const location = new Location(colIndex, rowIndex).serialize();
+            if (isWithinActiveBoard(location) || BLOCKED_VISUAL_KEYS.has(locationKey(location))) {
+                continue;
+            }
+
+            outerRingSquares.push(new Square(SquareTypesEnum.NORMAL, null, location).serialize());
+        }
+    }
+
+    return outerRingSquares;
+};
+
+const createOffboardSquares = (squares, includeHideoutKings = false) => {
+    const offboardSquares = createOuterRingSquares();
+    const redLaserPiece = extractLaserPiece(squares, RED_LASER_HOME_LOCATION);
+    const blueLaserPiece = extractLaserPiece(squares, BLUE_LASER_HOME_LOCATION);
+
+    if (redLaserPiece) {
+        offboardSquares.push(
+            new Square(
+                SquareTypesEnum.LASER_RED,
+                redLaserPiece,
+                cloneDeep(RED_LASER_LOCATION)
+            ).serialize()
+        );
+    }
+
+    if (blueLaserPiece) {
+        offboardSquares.push(
+            new Square(
+                SquareTypesEnum.LASER_BLUE,
+                blueLaserPiece,
+                cloneDeep(BLUE_LASER_LOCATION)
+            ).serialize()
+        );
+    }
+
+    if (includeHideoutKings) {
+        offboardSquares.push(
+            new Square(
+                SquareTypesEnum.HIDEOUT_RED,
+                new Piece("k", 0).serialize(),
+                cloneDeep(RED_HIDEOUT_LOCATION)
+            ).serialize(),
+            new Square(
+                SquareTypesEnum.HIDEOUT_BLUE,
+                new Piece("K", 0).serialize(),
+                cloneDeep(BLUE_HIDEOUT_LOCATION)
+            ).serialize()
+        );
+    }
+
+    return offboardSquares;
+};
 
 /**
  * @constant
@@ -95,10 +196,9 @@ class Board {
         }
         if (options.offboardPieces) {
             this.offboardPieces = options.offboardPieces;
-        } else if (!options.squares && (!options.setupNotation || options.setupNotation === DEFAULT_BOARD_SN)) {
-            this.offboardPieces = createDefaultOffboardPieces();
         } else {
-            this.offboardPieces = [];
+            const includeHideoutKings = !options.squares && (!options.setupNotation || options.setupNotation === DEFAULT_BOARD_SN);
+            this.offboardPieces = createOffboardSquares(this.squares, includeHideoutKings);
         }
         this.winner = null;
         this.winnerReason = null;
@@ -191,8 +291,7 @@ class Board {
 
         // Get the laser of the player on the move
         // Starting from the laser, start scanning squares in the direction where laser is pointing.
-        const an = (playerType === PlayerTypesEnum.BLUE) ? "j1" : "a8"; // We know exactly where the laser for each player is! As those are immovable pieces.
-        const laserSquareLocation = Location.fromAN(an);
+        const laserSquareLocation = (playerType === PlayerTypesEnum.BLUE) ? BLUE_LASER_LOCATION : RED_LASER_LOCATION;
         const laserSquare = this.getSquare(laserSquareLocation);
         if (SquareUtils.hasPiece(laserSquare)) {
             // Begin!
@@ -207,7 +306,7 @@ class Board {
             let eventType = LaserEventsEnum.START;
             let actionType = LaserActionTypesEnum.NOTHING;
 
-            completeRoute.push(new LaserPath(eventType, direction, actionType, laserSquareLocation.serialize()).serialize()); // start from the player's laser piece.
+            completeRoute.push(new LaserPath(eventType, direction, actionType, cloneDeep(laserSquareLocation)).serialize()); // start from the player's laser piece.
             while (eventType !== LaserEventsEnum.END) {
                 eventType = LaserEventsEnum.CENTRAL;
 
@@ -233,7 +332,12 @@ class Board {
                 rowIndex += dy;
 
                 // Make sure the indexes are not out of bound from the board.
-                if ((rowIndex < 0 || rowIndex > 7) || (colIndex < 0 || colIndex > 9)) {
+                if (
+                    rowIndex < VISUAL_MIN_ROW_INDEX ||
+                    rowIndex > VISUAL_MAX_ROW_INDEX ||
+                    colIndex < VISUAL_MIN_COL_INDEX ||
+                    colIndex > VISUAL_MAX_COL_INDEX
+                ) {
                     // If it is out of bound. Stop the laser right here
                     eventType = LaserEventsEnum.END;
                     completeRoute.push(new LaserPath(eventType, null, actionType, new Location(colIndex, rowIndex).serialize()).serialize());
@@ -319,20 +423,23 @@ class Board {
     }
 
     getAdjacentLocations(location) {
-        const srcX = location.colIndex;
-        const srcY = location.rowIndex;
-        const possibilities = [
-            [srcX - 1, srcY - 1],
-            [srcX + 0, srcY - 1],
-            [srcX + 1, srcY - 1],
-            [srcX + 1, srcY + 0],
-            [srcX + 1, srcY + 1],
-            [srcX + 0, srcY + 1],
-            [srcX - 1, srcY + 1],
-            [srcX - 1, srcY + 0],
-        ]
-            .filter(([dx, dy]) => dx >= 0 && dx < 10 && dy >= 0 && dy < 8)
-            .map(([dx, dy]) => new Location(dx, dy));
+        let possibilities = [];
+        if (!isHideoutLocation(location)) {
+            const srcX = location.colIndex;
+            const srcY = location.rowIndex;
+            possibilities = [
+                [srcX - 1, srcY - 1],
+                [srcX + 0, srcY - 1],
+                [srcX + 1, srcY - 1],
+                [srcX + 1, srcY + 0],
+                [srcX + 1, srcY + 1],
+                [srcX + 0, srcY + 1],
+                [srcX - 1, srcY + 1],
+                [srcX - 1, srcY + 0],
+            ]
+                .filter(([colIndex, rowIndex]) => isWithinVisualBoard({ colIndex, rowIndex }))
+                .map(([colIndex, rowIndex]) => new Location(colIndex, rowIndex));
+        }
 
         const hideoutConnections = HIDEOUT_CONNECTIONS[locationKey(location)] || [];
         hideoutConnections.forEach((key) => {
@@ -610,17 +717,16 @@ class Board {
         return true;
     }
 
-    canDeployPiece(location, playerType, pieceType = PieceTypesEnum.DEFLECTOR) {
+    canDeployPiece(location, _playerType, _pieceType = PieceTypesEnum.DEFLECTOR) {
         const squareAtDest = this.getSquare(location);
         if (!squareAtDest || SquareUtils.hasPiece(squareAtDest)) {
             return false;
         }
-
-        return this.canPlayerOccupySquare(squareAtDest, playerType, pieceType);
+        return true;
     }
 
     getDeployLocationsForPlayer(playerType, pieceType = PieceTypesEnum.DEFLECTOR) {
-        return flatMap(this.squares)
+        return [...flatMap(this.squares), ...this.offboardPieces]
             .filter(square => this.canDeployPiece(square.location, playerType, pieceType))
             .map(square => square.location);
     }
@@ -697,6 +803,10 @@ class Board {
     static isMovingToNeighborSquare(srcLocation, destLocation) {
         if ((HIDEOUT_CONNECTIONS[locationKey(srcLocation)] || []).includes(locationKey(destLocation))) {
             return true;
+        }
+
+        if (isHideoutLocation(srcLocation)) {
+            return false;
         }
 
         /**
