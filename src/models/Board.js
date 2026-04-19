@@ -467,7 +467,12 @@ class Board {
         const squareAtDest = this.getSquare(destLocation);
 
         // todo: remove the last OR statement, and add draggable={piece is not laser} instead in BoardPiece
-        if ((squareAtDest === null) || (squareAtSrc === null) || (squareAtSrc.piece.type === PieceTypesEnum.LASER)) {
+        if (
+            squareAtDest === null ||
+            squareAtSrc === null ||
+            !SquareUtils.hasPiece(squareAtSrc) ||
+            squareAtSrc.piece.type === PieceTypesEnum.LASER
+        ) {
             // Invalid destLocation, as it has no square there. Most likely this is out of bound.
             // Or, we are trying to move a Laser Piece, which is not a possible move according to the rules of the game.
             // Return as not possible to move.
@@ -530,6 +535,9 @@ class Board {
 
             // Normal movement (from one square to an empty one)
             const squareAtDest = this.getSquare(movement.destLocation);
+            if (!squareAtDest) {
+                return;
+            }
             // Move the piece from the src to dest.
             squareAtDest.piece = squareAtSrc.piece;
             squareAtSrc.piece = null;
@@ -537,17 +545,26 @@ class Board {
 
         } else if (movement.type === MovementTypesEnum.ROTATION_CLOCKWISE) {
             // Rotation movement (clockwise)
+            if (!SquareUtils.hasPiece(squareAtSrc)) {
+                return;
+            }
             const clockwise = true;
             PieceUtils.applyRotation(squareAtSrc.piece, clockwise);
 
         } else if (movement.type === MovementTypesEnum.ROTATION_C_CLOCKWISE) {
             // Rotation movement (counter-clockwise)
+            if (!SquareUtils.hasPiece(squareAtSrc)) {
+                return;
+            }
             const c_clockwise = false;
             PieceUtils.applyRotation(squareAtSrc.piece, c_clockwise);
 
         } else if (movement.type === MovementTypesEnum.SPECIAL) {
             // Special movement (Switch piece is swapping places with either a Deflector or Defender piece)
             const squareAtDest = this.getSquare(movement.destLocation);
+            if (!SquareUtils.hasPiece(squareAtSrc) || !squareAtDest) {
+                return;
+            }
 
             // Swap the pieces.
             const squareAtSrcPiece = squareAtSrc.piece;

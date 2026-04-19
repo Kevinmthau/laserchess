@@ -210,6 +210,14 @@ describe("mirror deployment rules", () => {
         ).toBe(MovementTypesEnum.NORMAL);
     });
 
+    it("treats reflector movement from an empty source square as invalid", () => {
+        const board = new Board({ setupNotation: "*/2B7/*/*/*/*/*/*" });
+
+        expect(
+            board.checkMovePossibility(Location.fromAN("c6"), Location.fromAN("c5")).type
+        ).toBe(MovementTypesEnum.INVALID);
+    });
+
     it("blocks reflector movement onto room object squares", () => {
         const board = new Board({ setupNotation: "*/2B7/*/*/*/*/*/*" });
 

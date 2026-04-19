@@ -22,6 +22,7 @@ const RIGHT_EXIT_ROW = 1;
 
 function App() {
 	const [boardWidth, setBoardWidth] = useState(700);
+	const [movementAnimationIsLocked, setMovementAnimationIsLocked] = useState(false);
 
 	const selectedPieceLocation = useSelector(state => state.game.selectedPieceLocation);
 	const currentPlayer = useSelector(state => state.game.currentPlayer);
@@ -84,8 +85,10 @@ function App() {
 			dispatch(unselectPiece());
 			const movement = new Movement(movementType, selectedPieceLocation, null);
 			Board.presentPieceMovement(stagePiecesRef, movement, getCellSize());
+			setMovementAnimationIsLocked(true);
 			setTimeout(() => {
 				dispatch(applyMovement({ movement: movement.serialize() }));
+				setMovementAnimationIsLocked(false);
 			}, 332);
 		}
 	}, [dispatch, getCellSize, pendingPlacement, selectedPieceLocation]);
@@ -154,6 +157,7 @@ function App() {
 										<BoardLayer
 											reference={stagePiecesRef}
 											cellSize={cellSize}
+											movementAnimationIsLocked={movementAnimationIsLocked}
 											onBoardPieceMove={(movement, srcPieceXY) => {
 												if (movement.type === MovementTypesEnum.SPECIAL) {
 													const destBoardPiece = stagePiecesRef.current?.findOne(`#${movement.destLocation.an}`);
@@ -169,8 +173,10 @@ function App() {
 
 												const delayed = !(movement.type === MovementTypesEnum.ROTATION_CLOCKWISE || movement.type === MovementTypesEnum.ROTATION_C_CLOCKWISE);
 												if (delayed) {
+													setMovementAnimationIsLocked(true);
 													setTimeout(() => {
 														dispatch(applyMovement({ movement: movement.serialize() }));
+														setMovementAnimationIsLocked(false);
 													}, 332);
 												} else {
 													dispatch(applyMovement({ movement: movement.serialize() }));

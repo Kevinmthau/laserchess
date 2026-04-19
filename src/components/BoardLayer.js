@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import BoardPiece, { pieceAnimDuration, pieceAnimEasing } from "./BoardPiece";
 import { SquareUtils } from "../models/Square";
 import { flatMap, isEmpty } from "lodash";
-import { applyMovement, deployMirror, selectPiece, unselectPiece } from "../redux/slices/gameSlice";
+import { deployMirror, selectPiece, unselectPiece } from "../redux/slices/gameSlice";
 import Board, { isDiamondGoalLocation } from "../models/Board";
 import PieceMoveHighlight from "./PieceMoveHighlight";
 import DeflectorDirectionOverlay from "./DeflectorDirectionOverlay";
@@ -55,7 +55,7 @@ const TOP_WINDOWS = [
 const CENTER_DIAMOND_COL = Math.floor(VISUAL_BOARD_COLS / 2);
 const CENTER_DIAMOND_ROW = Math.floor(VISUAL_BOARD_ROWS / 2);
 
-const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
+const BoardLayer = ({ reference, cellSize, onBoardPieceMove, movementAnimationIsLocked = false }) => {
     const dispatch = useDispatch();
     const squares = useSelector(state => state.game.squares);
     const offboardPieces = useSelector(state => state.game.offboardPieces);
@@ -520,7 +520,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
         return squaresWithPieces.map((square) => (
             <BoardPiece
                 currentPlayer={currentPlayer}
-                movementIsLocked={movementIsLocked || placementModeActive}
+                movementIsLocked={movementIsLocked || placementModeActive || movementAnimationIsLocked}
                 id={square.location.an}
                 key={`${square.piece.imageName}--${square.location.an}`}
                 squares={squares}
@@ -540,7 +540,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                 cellSize={cellSize}
             />
         ));
-    }, [flattenedSquares, currentPlayer, movementIsLocked, placementModeActive, squares, offboardPieces, onBoardPieceMove, cellSize, dispatch, selectedPieceLocation]);
+    }, [flattenedSquares, currentPlayer, movementAnimationIsLocked, movementIsLocked, placementModeActive, squares, offboardPieces, onBoardPieceMove, cellSize, dispatch, selectedPieceLocation]);
 
     const drawPossibleMovesHighlight = useCallback(() => {
         if (placementModeActive) {
@@ -574,9 +574,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                     onChoose={(move) => {
                         Board.presentPieceMovement(reference, move.serialize(), cellSize);
                         dispatch(unselectPiece());
-                        setTimeout(() => {
-                            dispatch(applyMovement({ movement: movement.serialize() }));
-                        }, 400);
+                        onBoardPieceMove(move, null);
                     }}
                     movement={movement}
                 />
@@ -584,7 +582,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
 
             return [possibleMovesHighlights, selectedPieceHighlight];
         }
-    }, [cellSize, currentPlayer, dispatch, offboardPieces, placementModeActive, reference, selectedPieceLocation, squares]);
+    }, [cellSize, currentPlayer, dispatch, offboardPieces, onBoardPieceMove, placementModeActive, reference, selectedPieceLocation, squares]);
 
     const drawDeployHighlights = useCallback(() => {
         if (!pendingPlacement) {
