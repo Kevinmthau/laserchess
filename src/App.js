@@ -158,11 +158,6 @@ function App() {
 					</ReactReduxContext.Consumer>
 				</div>
 
-				<div className="overlay-badge rounds-badge">
-					<span className="rounds-number">15</span>
-					<span className="rounds-label">Rounds<br />Left</span>
-				</div>
-
 				<div className="overlay-badge laser-badge top-right">
 					<span className="laser-dot" />
 					<span>Laser is<br />Charging</span>
@@ -183,7 +178,6 @@ function App() {
 				<div className={`team-banner ${teamAccent}`}>
 					<div className="team-banner-text">
 						<h4>{teamName}</h4>
-						<p>3 Moves Left <span className="timer-glyph">&#9201;</span>30</p>
 					</div>
 					<div className="team-banner-controls">
 						<button

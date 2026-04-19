@@ -107,27 +107,6 @@
     pointer-events: none;
 }
 
-.rounds-badge {
-    top: 14px;
-    left: 14px;
-    padding: 8px 18px 8px 14px;
-
-    .rounds-number {
-        color: #b52146;
-        font-size: 2.5rem;
-        line-height: 1;
-        font-family: Georgia, "Times New Roman", serif;
-        font-weight: 800;
-    }
-
-    .rounds-label {
-        color: #2b3851;
-        font-size: 0.78rem;
-        line-height: 1.1;
-        font-weight: 700;
-    }
-}
-
 .laser-badge {
     padding: 8px 14px;
     font-size: 0.72rem;
@@ -217,24 +196,7 @@
         letter-spacing: 0.02em;
     }
 
-    p {
-        margin: 2px 0 0;
-        color: #2a78c8;
-        font-size: 0.84rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-    }
-
-    .timer-glyph {
-        margin-left: 4px;
-        font-size: 1rem;
-    }
 }
-
-.team-banner.is-red .team-banner-text p { color: #c8324f; }
 
 .team-banner-controls {
     display: flex;
@@ -326,15 +288,6 @@
         &.right { right: 6px; }
     }
 
-    .rounds-badge {
-        top: 8px;
-        left: 8px;
-        padding: 6px 12px 6px 10px;
-
-        .rounds-number { font-size: 2rem; }
-        .rounds-label  { font-size: 0.68rem; }
-    }
-
     .laser-badge {
         padding: 6px 10px;
         font-size: 0.64rem;
@@ -351,7 +304,6 @@
     }
 
     .team-banner-text h4 { font-size: 1.05rem; }
-    .team-banner-text p  { font-size: 0.72rem; }
 }
 
 @media (max-width: 540px) {
