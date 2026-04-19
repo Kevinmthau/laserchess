@@ -15,6 +15,8 @@ import {
     ACTIVE_BOARD_COLS,
     ACTIVE_BOARD_ROW_OFFSET,
     ACTIVE_BOARD_ROWS,
+    BOOKSHELF_PROPS,
+    PILLAR_PROPS,
     VISUAL_BOARD_COLS,
     VISUAL_BOARD_ROWS
 } from "../constants/boardLayout";
@@ -43,12 +45,21 @@ export const BLUE_HIDEOUT_LOCATION = Object.freeze(new Location(12, 3).serialize
 
 const RED_LASER_HOME_LOCATION = Object.freeze(Location.fromAN("a8").serialize());
 const BLUE_LASER_HOME_LOCATION = Object.freeze(Location.fromAN("j1").serialize());
-const RED_HIDEOUT_ENTRY = Object.freeze(Location.fromAN("a3").serialize());
-const BLUE_HIDEOUT_ENTRY = Object.freeze(Location.fromAN("j5").serialize());
 
 const locationKey = (location) => `${location.colIndex},${location.rowIndex}`;
+const roomPropToBoardLocation = ({ col, row }) => new Location(
+    col - ACTIVE_BOARD_COL_OFFSET,
+    row - ACTIVE_BOARD_ROW_OFFSET
+).serialize();
 const RED_HIDEOUT_KEY = locationKey(RED_HIDEOUT_LOCATION);
 const BLUE_HIDEOUT_KEY = locationKey(BLUE_HIDEOUT_LOCATION);
+const ROOM_OBJECT_LOCATION_KEYS = new Set(
+    [...BOOKSHELF_PROPS, ...PILLAR_PROPS].map((prop) => locationKey(roomPropToBoardLocation(prop)))
+);
+const ROOM_OBJECT_BLOCKED_PIECE_TYPES = new Set([
+    PieceTypesEnum.DEFLECTOR,
+    PieceTypesEnum.KING
+]);
 const BLOCKED_VISUAL_KEYS = new Set([
     locationKey(RED_LASER_LOCATION),
     locationKey(BLUE_LASER_LOCATION),
@@ -69,17 +80,7 @@ const isWithinVisualBoard = (location) => (
     location.rowIndex >= VISUAL_MIN_ROW_INDEX &&
     location.rowIndex <= VISUAL_MAX_ROW_INDEX
 );
-const isHideoutLocation = (location) => {
-    const key = locationKey(location);
-    return key === RED_HIDEOUT_KEY || key === BLUE_HIDEOUT_KEY;
-};
-
-const HIDEOUT_CONNECTIONS = Object.freeze({
-    [locationKey(RED_HIDEOUT_LOCATION)]: [locationKey(RED_HIDEOUT_ENTRY)],
-    [locationKey(RED_HIDEOUT_ENTRY)]: [locationKey(RED_HIDEOUT_LOCATION)],
-    [locationKey(BLUE_HIDEOUT_LOCATION)]: [locationKey(BLUE_HIDEOUT_ENTRY)],
-    [locationKey(BLUE_HIDEOUT_ENTRY)]: [locationKey(BLUE_HIDEOUT_LOCATION)]
-});
+const isRoomObjectLocation = (location) => ROOM_OBJECT_LOCATION_KEYS.has(locationKey(location));
 
 const extractLaserPiece = (squares, location) => {
     const square = squares[location.rowIndex]?.[location.colIndex];
@@ -423,31 +424,21 @@ class Board {
     }
 
     getAdjacentLocations(location) {
-        let possibilities = [];
-        if (!isHideoutLocation(location)) {
-            const srcX = location.colIndex;
-            const srcY = location.rowIndex;
-            possibilities = [
-                [srcX - 1, srcY - 1],
-                [srcX + 0, srcY - 1],
-                [srcX + 1, srcY - 1],
-                [srcX + 1, srcY + 0],
-                [srcX + 1, srcY + 1],
-                [srcX + 0, srcY + 1],
-                [srcX - 1, srcY + 1],
-                [srcX - 1, srcY + 0],
-            ]
-                .filter(([colIndex, rowIndex]) => isWithinVisualBoard({ colIndex, rowIndex }))
-                .map(([colIndex, rowIndex]) => new Location(colIndex, rowIndex));
-        }
+        const srcX = location.colIndex;
+        const srcY = location.rowIndex;
 
-        const hideoutConnections = HIDEOUT_CONNECTIONS[locationKey(location)] || [];
-        hideoutConnections.forEach((key) => {
-            const [colIndex, rowIndex] = key.split(",").map(Number);
-            possibilities.push(new Location(colIndex, rowIndex));
-        });
-
-        return possibilities;
+        return [
+            [srcX - 1, srcY - 1],
+            [srcX + 0, srcY - 1],
+            [srcX + 1, srcY - 1],
+            [srcX + 1, srcY + 0],
+            [srcX + 1, srcY + 1],
+            [srcX + 0, srcY + 1],
+            [srcX - 1, srcY + 1],
+            [srcX - 1, srcY + 0],
+        ]
+            .filter(([colIndex, rowIndex]) => isWithinVisualBoard({ colIndex, rowIndex }))
+            .map(([colIndex, rowIndex]) => new Location(colIndex, rowIndex));
     }
 
     /**
@@ -694,6 +685,10 @@ class Board {
             return false;
         }
 
+        if (ROOM_OBJECT_BLOCKED_PIECE_TYPES.has(pieceType) && isRoomObjectLocation(square.location)) {
+            return false;
+        }
+
         if (square.type === SquareTypesEnum.RESERVED_BLUE && playerType !== PlayerTypesEnum.BLUE) {
             return false;
         }
@@ -717,11 +712,16 @@ class Board {
         return true;
     }
 
-    canDeployPiece(location, _playerType, _pieceType = PieceTypesEnum.DEFLECTOR) {
+    canDeployPiece(location, _playerType, pieceType = PieceTypesEnum.DEFLECTOR) {
         const squareAtDest = this.getSquare(location);
         if (!squareAtDest || SquareUtils.hasPiece(squareAtDest)) {
             return false;
         }
+
+        if (pieceType === PieceTypesEnum.DEFLECTOR && isRoomObjectLocation(squareAtDest.location)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -801,14 +801,6 @@ class Board {
      * @returns {boolean} true if the destLocation square is a neighboring square, otherwise false for every other square.
      */
     static isMovingToNeighborSquare(srcLocation, destLocation) {
-        if ((HIDEOUT_CONNECTIONS[locationKey(srcLocation)] || []).includes(locationKey(destLocation))) {
-            return true;
-        }
-
-        if (isHideoutLocation(srcLocation)) {
-            return false;
-        }
-
         /**
          * Minimum squares to be moved to, given xy as srcLocation
          * 

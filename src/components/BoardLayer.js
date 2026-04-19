@@ -14,6 +14,8 @@ import {
     ACTIVE_BOARD_COLS,
     ACTIVE_BOARD_ROW_OFFSET,
     ACTIVE_BOARD_ROWS,
+    BOOKSHELF_PROPS,
+    PILLAR_PROPS,
     VISUAL_BOARD_COLS,
     VISUAL_BOARD_ROWS
 } from "../constants/boardLayout";
@@ -47,22 +49,6 @@ const TOP_WINDOWS = [
     { x: 6.26, width: 2.5, tint: "#CFE7FF" },
     { x: 10.16, width: 1.12, tint: "#C9E1FF" },
     { x: 12.92, width: 1.12, tint: "#A5B7FF" }
-];
-
-const BOOKSHELF_PROPS = [
-    { col: 2, row: 1, width: 0.72, height: 0.72 },
-    { col: 12, row: 1, width: 0.72, height: 0.72 },
-    { col: 13, row: 3, width: 0.72, height: 0.72 },
-    { col: 1, row: 5, width: 0.72, height: 0.72 },
-    { col: 2, row: 7, width: 0.72, height: 0.72 },
-    { col: 12, row: 7, width: 0.72, height: 0.72 }
-];
-
-const PILLAR_PROPS = [
-    { col: 5, row: 1 },
-    { col: 8, row: 1 },
-    { col: 5, row: 6 },
-    { col: 9, row: 6 }
 ];
 
 const CENTER_DIAMOND_COL = Math.floor(VISUAL_BOARD_COLS / 2);

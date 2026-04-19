@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
-import Board, { RED_LASER_LOCATION } from "./Board";
+import Board, { BLUE_HIDEOUT_LOCATION, RED_LASER_LOCATION } from "./Board";
 import Location from "./Location";
 import { LaserActionTypesEnum, MovementTypesEnum, PieceTypesEnum, PlayerTypesEnum } from "./Enums";
 import gameReducer, {
@@ -84,15 +84,56 @@ describe("laser blocker resolution", () => {
 });
 
 describe("mirror deployment rules", () => {
-    it("allows reserve mirrors on any empty visible square", () => {
+    it("allows reserve mirrors on empty visible squares without room props", () => {
         const board = new Board();
 
         expect(board.canDeployPiece(Location.fromAN("a8").serialize(), PlayerTypesEnum.BLUE)).toBe(true);
-        expect(board.canDeployPiece(Location.fromAN("a7").serialize(), PlayerTypesEnum.BLUE)).toBe(true);
+        expect(board.canDeployPiece(Location.fromAN("a6").serialize(), PlayerTypesEnum.BLUE)).toBe(true);
         expect(board.canDeployPiece(Location.fromAN("j2").serialize(), PlayerTypesEnum.RED)).toBe(true);
         expect(board.canDeployPiece(Location.fromAN("e4").serialize(), PlayerTypesEnum.BLUE)).toBe(true);
         expect(board.canDeployPiece(new Location(-1, 0).serialize(), PlayerTypesEnum.BLUE)).toBe(true);
         expect(board.canDeployPiece(new Location(10, 8).serialize(), PlayerTypesEnum.RED)).toBe(true);
+        expect(board.canDeployPiece(Location.fromAN("a7").serialize(), PlayerTypesEnum.BLUE)).toBe(false);
+        expect(board.canDeployPiece(Location.fromAN("d7").serialize(), PlayerTypesEnum.BLUE)).toBe(false);
+        expect(board.canDeployPiece(new Location(-1, 5).serialize(), PlayerTypesEnum.BLUE)).toBe(false);
+    });
+
+    it("blocks reflector movement onto room object squares", () => {
+        const board = new Board({ setupNotation: "*/2B7/*/*/*/*/*/*" });
+
+        expect(
+            board.checkMovePossibility(Location.fromAN("c7"), Location.fromAN("d7")).type
+        ).toBe(MovementTypesEnum.INVALID);
+    });
+
+    it("allows the burglar to move one square into an open space", () => {
+        const board = new Board({ setupNotation: "*/2K7/*/*/*/*/*/*" });
+
+        expect(
+            board.checkMovePossibility(Location.fromAN("c7"), Location.fromAN("c6")).type
+        ).toBe(MovementTypesEnum.NORMAL);
+    });
+
+    it("blocks burglar movement onto room object squares", () => {
+        const board = new Board({ setupNotation: "*/2K7/*/*/*/*/*/*" });
+
+        expect(
+            board.checkMovePossibility(Location.fromAN("c7"), Location.fromAN("d7")).type
+        ).toBe(MovementTypesEnum.INVALID);
+    });
+
+    it("highlights all legal adjacent squares around a burglar in the hideout", () => {
+        const board = new Board();
+        const destinations = board.getMovesForPieceAtLocation(BLUE_HIDEOUT_LOCATION)
+            .map(({ destLocation }) => `${destLocation.colIndex},${destLocation.rowIndex}`)
+            .sort();
+
+        expect(destinations).toEqual([
+            "11,2",
+            "11,4",
+            "12,2",
+            "12,4"
+        ]);
     });
 
     it("deploys onto an opponent reserved square through the reducer flow", () => {
@@ -104,12 +145,12 @@ describe("mirror deployment rules", () => {
 
         store.dispatch(setBoardType({ setupNotation: "l+9/*/*/*/*/*/*/9L+++" }));
         store.dispatch(startMirrorPlacement());
-        store.dispatch(deployMirror({ location: Location.fromAN("a7").serialize() }));
+        store.dispatch(deployMirror({ location: Location.fromAN("a6").serialize() }));
 
         const state = store.getState().game;
 
-        expect(state.squares[1][0].piece).not.toBeNull();
-        expect(state.squares[1][0].piece.type).toBe(PieceTypesEnum.DEFLECTOR);
+        expect(state.squares[2][0].piece).not.toBeNull();
+        expect(state.squares[2][0].piece.type).toBe(PieceTypesEnum.DEFLECTOR);
         expect(state.mirrorReserve[PlayerTypesEnum.BLUE]).toBe(2);
     });
 
