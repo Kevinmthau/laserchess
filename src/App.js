@@ -12,8 +12,12 @@ import RotateLeftIcon from "@material-ui/icons/RotateLeft";
 import RotateRightIcon from "@material-ui/icons/RotateRight";
 import Movement from "./models/Movement";
 
+const BOARD_COLS = 10;
+const BOARD_ROWS = 8;
+const BOARD_ASPECT = BOARD_COLS / BOARD_ROWS;
+
 function App() {
-	const [stageWidth, setStageWidth] = useState(700);
+	const [boardWidth, setBoardWidth] = useState(700);
 
 	const selectedPieceLocation = useSelector(state => state.game.selectedPieceLocation);
 	const currentPlayer = useSelector(state => state.game.currentPlayer);
@@ -25,26 +29,17 @@ function App() {
 
 	const stagePiecesRef = useRef();
 	const stageContainerRef = useRef();
-	const topSectionRef = useRef();
-	const bottomSectionRef = useRef();
 	const dispatch = useDispatch();
 
-	const getBoardSize = useCallback(() => {
-		return stageWidth;
-	}, [stageWidth]);
-
-	const getCellSize = useCallback(() => {
-		return getBoardSize() / 10;
-	}, [getBoardSize]);
+	const getCellSize = useCallback(() => boardWidth / BOARD_COLS, [boardWidth]);
 
 	const refreshBoardSize = () => {
-		const width = stageContainerRef.current?.offsetWidth ?? (window.innerWidth - 32);
-		const topSectionHeight = topSectionRef.current?.offsetHeight ?? 0;
-		const bottomSectionHeight = bottomSectionRef.current?.offsetHeight ?? 0;
-		const reservedVerticalSpace = topSectionHeight + bottomSectionHeight + 64;
-		const availableBoardHeight = Math.max(280, window.innerHeight - reservedVerticalSpace);
-		const maxBoardWidthFromHeight = Math.max(320, (availableBoardHeight - 28) / 0.8);
-		setStageWidth(Math.min(width, maxBoardWidthFromHeight));
+		const horizontalPadding = 32;
+		const verticalPadding = 32;
+		const availableWidth = Math.max(320, window.innerWidth - horizontalPadding);
+		const availableHeight = Math.max(240, window.innerHeight - verticalPadding);
+		const widthFromHeight = availableHeight * BOARD_ASPECT;
+		setBoardWidth(Math.min(availableWidth, widthFromHeight));
 	};
 
 	useEffect(() => {
@@ -69,84 +64,28 @@ function App() {
 		}
 	}, [dispatch, laser.route]);
 
-	const renderRotationControls = useCallback((playerType) => {
-		const isCurrentPlayer = currentPlayer === playerType;
-		const accentClass = playerType === PlayerTypesEnum.BLUE ? "is-blue" : "is-red";
-		const label = playerType === PlayerTypesEnum.BLUE ? "Blue Crew" : "Red Crew";
-		const reserveCount = mirrorReserve[playerType];
-		const isPlacementActive = pendingPlacement?.playerType === playerType;
-		const copy = isCurrentPlayer
-			? isPlacementActive
-				? `Mirror queued at ${pendingPlacement.orientation}°. Click a highlighted square to place it.`
-				: "Move your burglar or place a mirror. The laser fires after every move."
-			: "Protect your burglar. Control the mirror lanes.";
+	const triggerRotation = useCallback((movementType, clockwise) => {
+		const isPlacementActive = Boolean(pendingPlacement);
+		if (isPlacementActive) {
+			dispatch(rotatePendingPlacement({ clockwise }));
+			return;
+		}
 
-		const triggerRotation = (movementType, clockwise) => {
-			if (isCurrentPlayer && isPlacementActive) {
-				dispatch(rotatePendingPlacement({ clockwise }));
-				return;
-			}
+		if (selectedPieceLocation) {
+			dispatch(unselectPiece());
+			const movement = new Movement(movementType, selectedPieceLocation, null);
+			Board.presentPieceMovement(stagePiecesRef, movement, getCellSize());
+			setTimeout(() => {
+				dispatch(applyMovement({ movement: movement.serialize() }));
+			}, 332);
+		}
+	}, [dispatch, getCellSize, pendingPlacement, selectedPieceLocation]);
 
-			if (isCurrentPlayer && selectedPieceLocation) {
-				dispatch(unselectPiece());
-				const movement = new Movement(movementType, selectedPieceLocation, null);
-				Board.presentPieceMovement(stagePiecesRef, movement, getCellSize());
-				setTimeout(() => {
-					dispatch(applyMovement({ movement: movement.serialize() }));
-				}, 332);
-			}
-		};
-
-		return (
-			<div className={`player-controls ${accentClass}`}>
-				<div className="player-meta">
-					<span className="player-emblem" />
-					<div className="player-copy">
-						<h4>{label}</h4>
-						<p>{copy}</p>
-					</div>
-				</div>
-				{isCurrentPlayer && <span className={`turn-pill ${accentClass}`}>Your turn</span>}
-				<div className="control-buttons">
-					<button
-						type="button"
-						className={`mirror-reserve-btn ${isPlacementActive ? "is-active" : ""}`}
-						onClick={() => {
-							if (!isCurrentPlayer || reserveCount <= 0) {
-								return;
-							}
-
-							if (isPlacementActive) {
-								dispatch(cancelMirrorPlacement());
-							} else {
-								dispatch(startMirrorPlacement());
-							}
-						}}
-						disabled={!isCurrentPlayer || reserveCount <= 0}
-					>
-						<span>{isPlacementActive ? "Cancel Mirror" : "Place Mirror"}</span>
-						<strong>{reserveCount} left</strong>
-					</button>
-					<IconButton
-						className="lc-btn-control"
-						onClick={() => triggerRotation(MovementTypesEnum.ROTATION_C_CLOCKWISE, false)}
-						disabled={(!isPlacementActive && selectedPieceLocation === null) || !isCurrentPlayer}
-						aria-label={`rotate ${label} piece left`}
-					>
-						<RotateLeftIcon />
-					</IconButton>
-					<IconButton
-						className="lc-btn-control"
-						onClick={() => triggerRotation(MovementTypesEnum.ROTATION_CLOCKWISE, true)}
-						disabled={(!isPlacementActive && selectedPieceLocation === null) || !isCurrentPlayer}
-						aria-label={`rotate ${label} piece right`}
-					>
-						<RotateRightIcon />
-					</IconButton>
-				</div>
-			</div>
-		);
-	}, [currentPlayer, dispatch, getCellSize, mirrorReserve, pendingPlacement, selectedPieceLocation]);
+	const teamName = currentPlayer === PlayerTypesEnum.BLUE ? "Blue Team" : "Red Team";
+	const teamAccent = currentPlayer === PlayerTypesEnum.BLUE ? "is-blue" : "is-red";
+	const isPlacementActive = Boolean(pendingPlacement);
+	const reserveCount = mirrorReserve[currentPlayer];
+	const canRotate = isPlacementActive || Boolean(selectedPieceLocation);
 
 	const winnerLabel = winner ? winner.toUpperCase() : "";
 	const winnerHeadline = winnerReason === WinReasonsEnum.DIAMOND
@@ -156,8 +95,10 @@ function App() {
 		? "The heist is over before the laser could answer."
 		: "One burglar got caught in the beam.";
 
+	const boardHeight = boardWidth / BOARD_ASPECT;
+
 	return (
-		<div className="portrait-container">
+		<div className="heist-stage">
 			{winner && (
 				<div className="winner-banner">
 					<p className="winner-eyebrow">Heist Complete</p>
@@ -173,57 +114,114 @@ function App() {
 				</div>
 			)}
 
-			<div className="player-section red-section" ref={topSectionRef}>
-				{renderRotationControls(PlayerTypesEnum.RED)}
-			</div>
+			<div
+				className="board-shell"
+				style={{ width: boardWidth, height: boardHeight }}
+			>
+				<div className="board" ref={stageContainerRef}>
+					<ReactReduxContext.Consumer>
+						{({ store }) => (
+							<Stage
+								id="stage"
+								className="stage"
+								width={boardWidth}
+								height={boardHeight}
+							>
+								<Provider store={store}>
+									<BoardLayer
+										reference={stagePiecesRef}
+										cellSize={getCellSize()}
+										onBoardPieceMove={(movement, srcPieceXY) => {
+											if (movement.type === MovementTypesEnum.SPECIAL) {
+												const [destBoardPiece] = stagePiecesRef.current.find(`#${movement.destLocation.an}`);
+												destBoardPiece.to({
+													x: srcPieceXY.x,
+													y: srcPieceXY.y,
+													duration: pieceAnimDuration,
+													easing: pieceAnimEasing
+												});
+											}
 
-			<div className="board-container">
-				<div className="board-shell">
-					<div className="board" ref={stageContainerRef}>
-						<ReactReduxContext.Consumer>
-							{({ store }) => (
-								<Stage
-									id="stage"
-									className="stage"
-									width={getBoardSize()}
-									height={getBoardSize() - (2 * getCellSize())}
-								>
-									<Provider store={store}>
-										<BoardLayer
-											reference={stagePiecesRef}
-											cellSize={getCellSize()}
-											onBoardPieceMove={(movement, srcPieceXY) => {
-												if (movement.type === MovementTypesEnum.SPECIAL) {
-													const [destBoardPiece] = stagePiecesRef.current.find(`#${movement.destLocation.an}`);
-													destBoardPiece.to({
-														x: srcPieceXY.x,
-														y: srcPieceXY.y,
-														duration: pieceAnimDuration,
-														easing: pieceAnimEasing
-													});
-												}
-
-												const delayed = !(movement.type === MovementTypesEnum.ROTATION_CLOCKWISE || movement.type === MovementTypesEnum.ROTATION_C_CLOCKWISE);
-												if (delayed) {
-													setTimeout(() => {
-														dispatch(applyMovement({ movement: movement.serialize() }));
-													}, 332);
-												} else {
+											const delayed = !(movement.type === MovementTypesEnum.ROTATION_CLOCKWISE || movement.type === MovementTypesEnum.ROTATION_C_CLOCKWISE);
+											if (delayed) {
+												setTimeout(() => {
 													dispatch(applyMovement({ movement: movement.serialize() }));
-												}
-											}}
-										/>
-									</Provider>
-								</Stage>
-							)}
-						</ReactReduxContext.Consumer>
-					</div>
-
+												}, 332);
+											} else {
+												dispatch(applyMovement({ movement: movement.serialize() }));
+											}
+										}}
+									/>
+								</Provider>
+							</Stage>
+						)}
+					</ReactReduxContext.Consumer>
 				</div>
-			</div>
 
-			<div className="player-section blue-section" ref={bottomSectionRef}>
-				{renderRotationControls(PlayerTypesEnum.BLUE)}
+				<div className="overlay-badge rounds-badge">
+					<span className="rounds-number">15</span>
+					<span className="rounds-label">Rounds<br />Left</span>
+				</div>
+
+				<div className="overlay-badge laser-badge top-right">
+					<span className="laser-dot" />
+					<span>Laser is<br />Charging</span>
+				</div>
+
+				<div className="overlay-badge laser-badge bottom-left">
+					<span className="laser-dot" />
+					<span>Laser is<br />Charging</span>
+				</div>
+
+				<button type="button" className="nav-arrow left" aria-label="previous">
+					<span>&larr;</span>
+				</button>
+				<button type="button" className="nav-arrow right" aria-label="next">
+					<span>&rarr;</span>
+				</button>
+
+				<div className={`team-banner ${teamAccent}`}>
+					<div className="team-banner-text">
+						<h4>{teamName}</h4>
+						<p>3 Moves Left <span className="timer-glyph">&#9201;</span>30</p>
+					</div>
+					<div className="team-banner-controls">
+						<button
+							type="button"
+							className={`mirror-reserve-btn ${isPlacementActive ? "is-active" : ""}`}
+							onClick={() => {
+								if (reserveCount <= 0) {
+									return;
+								}
+								if (isPlacementActive) {
+									dispatch(cancelMirrorPlacement());
+								} else {
+									dispatch(startMirrorPlacement());
+								}
+							}}
+							disabled={reserveCount <= 0}
+						>
+							<span>{isPlacementActive ? "Cancel" : "Mirror"}</span>
+							<strong>{reserveCount}</strong>
+						</button>
+						<IconButton
+							className="lc-btn-control"
+							onClick={() => triggerRotation(MovementTypesEnum.ROTATION_C_CLOCKWISE, false)}
+							disabled={!canRotate}
+							aria-label="rotate counter-clockwise"
+						>
+							<RotateLeftIcon />
+						</IconButton>
+						<IconButton
+							className="lc-btn-control"
+							onClick={() => triggerRotation(MovementTypesEnum.ROTATION_CLOCKWISE, true)}
+							disabled={!canRotate}
+							aria-label="rotate clockwise"
+						>
+							<RotateRightIcon />
+						</IconButton>
+					</div>
+				</div>
 			</div>
 		</div>
 	);

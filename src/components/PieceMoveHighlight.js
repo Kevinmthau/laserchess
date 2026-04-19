@@ -1,11 +1,12 @@
 import React from "react";
-import { Circle, Group, Rect } from "react-konva";
+import { Group, Rect } from "react-konva";
 import { MovementTypesEnum } from "../models/Enums";
 
 const PieceMoveHighlight = ({ cellSize, movement, onChoose }) => {
     const isSpecialMove = movement.type === MovementTypesEnum.SPECIAL;
-    const accent = isSpecialMove ? "#FF7A99" : "#61F3FF";
-    const inset = cellSize * 0.16;
+    const accent = isSpecialMove ? "#FFB46B" : "#7FE39B";
+    const fill = isSpecialMove ? "rgba(255, 180, 107, 0.22)" : "rgba(127, 227, 155, 0.22)";
+    const inset = cellSize * 0.08;
 
     return (
         <Group
@@ -19,22 +20,14 @@ const PieceMoveHighlight = ({ cellSize, movement, onChoose }) => {
                 y={inset}
                 width={cellSize - (inset * 2)}
                 height={cellSize - (inset * 2)}
-                cornerRadius={cellSize * 0.16}
+                cornerRadius={cellSize * 0.18}
+                fill={fill}
                 stroke={accent}
                 strokeWidth={2}
                 shadowEnabled={true}
                 shadowColor={accent}
-                shadowBlur={14}
-                opacity={0.95}
-            />
-            <Circle
-                x={cellSize / 2}
-                y={cellSize / 2}
-                radius={isSpecialMove ? cellSize * 0.12 : cellSize * 0.09}
-                fill={accent}
-                shadowEnabled={true}
-                shadowColor={accent}
                 shadowBlur={18}
+                opacity={0.95}
             />
         </Group>
     );

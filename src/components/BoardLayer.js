@@ -13,42 +13,50 @@ import PieceMoveHighlight from "./PieceMoveHighlight";
 const getSquarePalette = (square) => {
     if (isDiamondGoalLocation(square.location)) {
         return {
-            fill: "#16374B",
-            insetFill: "#194B67",
-            stroke: "#60EAFF"
+            fill: "#18384C",
+            insetFill: "#1D516E",
+            stroke: "#7BEFFF",
+            marker: "rgba(160, 240, 255, 0.22)"
         };
     }
 
     switch (square.type) {
         case SquareTypesEnum.LASER_BLUE:
             return {
-                fill: "#143047",
-                insetFill: "#235687",
-                stroke: "#79E8FF"
+                fill: "#111B2E",
+                insetFill: "#16243D",
+                stroke: "rgba(140, 200, 255, 0.20)",
+                marker: null,
+                skylight: "blue"
             };
         case SquareTypesEnum.LASER_RED:
             return {
-                fill: "#43192F",
-                insetFill: "#8E3358",
-                stroke: "#FFC3D3"
+                fill: "#1B1224",
+                insetFill: "#261728",
+                stroke: "rgba(255, 180, 200, 0.18)",
+                marker: null,
+                skylight: "red"
             };
         case SquareTypesEnum.RESERVED_BLUE:
             return {
-                fill: "#182844",
-                insetFill: "#213D67",
-                stroke: "#5D9BFF"
+                fill: "#162A4C",
+                insetFill: "#1E3A6A",
+                stroke: "rgba(110, 170, 255, 0.35)",
+                marker: "rgba(170, 210, 255, 0.22)"
             };
         case SquareTypesEnum.RESERVED_RED:
             return {
-                fill: "#331A2A",
-                insetFill: "#5A2742",
-                stroke: "#FF799C"
+                fill: "#3A1F3D",
+                insetFill: "#4A2858",
+                stroke: "rgba(200, 130, 255, 0.35)",
+                marker: "rgba(230, 190, 255, 0.22)"
             };
         default:
             return {
-                fill: "#161C3B",
-                insetFill: "#1B2348",
-                stroke: "rgba(183, 198, 255, 0.16)"
+                fill: "#1C2836",
+                insetFill: "#243345",
+                stroke: "rgba(170, 200, 255, 0.10)",
+                marker: "rgba(255, 255, 255, 0.10)"
             };
     }
 };
@@ -64,59 +72,75 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
     const laser = useSelector(state => state.game.laser);
     const placementModeActive = Boolean(pendingPlacement);
 
-    const drawBoardBackdrop = useCallback(() => (
-        <Group listening={false}>
-            <Rect
-                x={0}
-                y={0}
-                width={cellSize * 10}
-                height={cellSize * 8}
-                fillLinearGradientStartPoint={{ x: 0, y: 0 }}
-                fillLinearGradientEndPoint={{ x: cellSize * 10, y: cellSize * 8 }}
-                fillLinearGradientColorStops={[0, "#1B2047", 0.35, "#2C3468", 0.65, "#232B59", 1, "#151B3A"]}
-            />
-            <Circle
-                x={cellSize * 5}
-                y={cellSize * 4}
-                radius={cellSize * 1.6}
-                fillRadialGradientStartPoint={{ x: 0, y: 0 }}
-                fillRadialGradientEndPoint={{ x: 0, y: 0 }}
-                fillRadialGradientStartRadius={0}
-                fillRadialGradientEndRadius={cellSize * 1.6}
-                fillRadialGradientColorStops={[0, "rgba(104, 241, 255, 0.28)", 1, "rgba(104, 241, 255, 0)"]}
-            />
-            <Circle
-                x={cellSize * 3}
-                y={cellSize * 3}
-                radius={cellSize * 1.4}
-                fillRadialGradientStartPoint={{ x: 0, y: 0 }}
-                fillRadialGradientEndPoint={{ x: 0, y: 0 }}
-                fillRadialGradientStartRadius={0}
-                fillRadialGradientEndRadius={cellSize * 1.4}
-                fillRadialGradientColorStops={[0, "rgba(255, 111, 154, 0.18)", 1, "rgba(255, 111, 154, 0)"]}
-            />
-            <Circle
-                x={cellSize * 7.4}
-                y={cellSize * 2.8}
-                radius={cellSize * 1.45}
-                fillRadialGradientStartPoint={{ x: 0, y: 0 }}
-                fillRadialGradientEndPoint={{ x: 0, y: 0 }}
-                fillRadialGradientStartRadius={0}
-                fillRadialGradientEndRadius={cellSize * 1.45}
-                fillRadialGradientColorStops={[0, "rgba(107, 175, 255, 0.2)", 1, "rgba(107, 175, 255, 0)"]}
-            />
-        </Group>
-    ), [cellSize]);
+    const drawBoardBackdrop = useCallback(() => {
+        const kings = flattenedSquares
+            .filter(square => SquareUtils.hasPiece(square) && square.piece.type === PieceTypesEnum.KING)
+            .map(square => ({
+                color: square.piece.color,
+                x: (square.location.colIndex + 0.5) * cellSize,
+                y: (square.location.rowIndex + 0.5) * cellSize
+            }));
+
+        return (
+            <Group listening={false}>
+                <Rect
+                    x={0}
+                    y={0}
+                    width={cellSize * 10}
+                    height={cellSize * 8}
+                    fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+                    fillLinearGradientEndPoint={{ x: cellSize * 10, y: cellSize * 8 }}
+                    fillLinearGradientColorStops={[0, "#16202C", 0.35, "#1A2838", 0.65, "#161F2E", 1, "#0D1522"]}
+                />
+                <Circle
+                    x={cellSize * 5}
+                    y={cellSize * 4}
+                    radius={cellSize * 1.9}
+                    fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+                    fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+                    fillRadialGradientStartRadius={0}
+                    fillRadialGradientEndRadius={cellSize * 1.9}
+                    fillRadialGradientColorStops={[0, "rgba(104, 241, 255, 0.36)", 1, "rgba(104, 241, 255, 0)"]}
+                />
+                {kings.map((king, index) => {
+                    const isBlue = king.color === PlayerTypesEnum.BLUE;
+                    const color = isBlue ? "rgba(110, 180, 255, 0.28)" : "rgba(255, 105, 125, 0.30)";
+                    const radius = cellSize * 1.7;
+                    return (
+                        <Circle
+                            key={`king-spot-${index}`}
+                            x={king.x}
+                            y={king.y}
+                            radius={radius}
+                            fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+                            fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+                            fillRadialGradientStartRadius={0}
+                            fillRadialGradientEndRadius={radius}
+                            fillRadialGradientColorStops={[0, color, 1, color.replace(/[\d.]+\)$/, "0)")]}
+                        />
+                    );
+                })}
+            </Group>
+        );
+    }, [cellSize, flattenedSquares]);
 
     const drawGrid = useCallback(() => {
         const inset = cellSize * 0.05;
+        const markerLen = cellSize * 0.11;
         return flattenedSquares.map(square => {
             const palette = getSquarePalette(square);
+            const baseX = Location.getX(square.location.colIndex, cellSize, false);
+            const baseY = Location.getY(square.location.rowIndex, cellSize, false);
+            const centerX = baseX + (cellSize / 2);
+            const centerY = baseY + (cellSize / 2);
+            const isSkylight = Boolean(palette.skylight);
+            const skylightBlue = palette.skylight === "blue";
+
             return (
                 <Group key={`grid--${square.location.an}`} listening={false}>
                     <Rect
-                        x={Location.getX(square.location.colIndex, cellSize, false) + inset}
-                        y={Location.getY(square.location.rowIndex, cellSize, false) + inset}
+                        x={baseX + inset}
+                        y={baseY + inset}
                         width={cellSize - (inset * 2)}
                         height={cellSize - (inset * 2)}
                         cornerRadius={cellSize * 0.12}
@@ -124,15 +148,78 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                         stroke={palette.stroke}
                         strokeWidth={1.5}
                     />
-                    <Rect
-                        x={Location.getX(square.location.colIndex, cellSize, false) + (inset * 1.85)}
-                        y={Location.getY(square.location.rowIndex, cellSize, false) + (inset * 1.85)}
-                        width={cellSize - (inset * 3.7)}
-                        height={cellSize - (inset * 3.7)}
-                        cornerRadius={cellSize * 0.1}
-                        fill={palette.insetFill}
-                        opacity={0.38}
-                    />
+                    {!isSkylight && (
+                        <Rect
+                            x={baseX + (inset * 1.85)}
+                            y={baseY + (inset * 1.85)}
+                            width={cellSize - (inset * 3.7)}
+                            height={cellSize - (inset * 3.7)}
+                            cornerRadius={cellSize * 0.1}
+                            fill={palette.insetFill}
+                            opacity={0.38}
+                        />
+                    )}
+                    {palette.marker && (
+                        <Group listening={false}>
+                            <Line
+                                points={[centerX - markerLen, centerY, centerX + markerLen, centerY]}
+                                stroke={palette.marker}
+                                strokeWidth={1.4}
+                                lineCap="round"
+                            />
+                            <Line
+                                points={[centerX, centerY - markerLen, centerX, centerY + markerLen]}
+                                stroke={palette.marker}
+                                strokeWidth={1.4}
+                                lineCap="round"
+                            />
+                        </Group>
+                    )}
+                    {isSkylight && (
+                        <Group listening={false}>
+                            <Rect
+                                x={baseX + (cellSize * 0.12)}
+                                y={baseY + (cellSize * 0.18)}
+                                width={cellSize * 0.76}
+                                height={cellSize * 0.64}
+                                cornerRadius={cellSize * 0.08}
+                                fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+                                fillLinearGradientEndPoint={{ x: 0, y: cellSize * 0.64 }}
+                                fillLinearGradientColorStops={skylightBlue
+                                    ? [0, "#DDF8FF", 0.45, "#79E0FF", 1, "#1E5E8A"]
+                                    : [0, "#FFE4EB", 0.45, "#FF9BB5", 1, "#7E2748"]}
+                                opacity={0.88}
+                                stroke={skylightBlue ? "rgba(190, 240, 255, 0.55)" : "rgba(255, 210, 220, 0.55)"}
+                                strokeWidth={1}
+                                shadowEnabled={true}
+                                shadowColor={skylightBlue ? "#79E0FF" : "#FF9BB5"}
+                                shadowBlur={20}
+                                shadowOpacity={0.55}
+                            />
+                            <Line
+                                points={[
+                                    baseX + (cellSize * 0.22),
+                                    baseY + (cellSize * 0.28),
+                                    baseX + (cellSize * 0.42),
+                                    baseY + (cellSize * 0.72)
+                                ]}
+                                stroke="rgba(255, 255, 255, 0.55)"
+                                strokeWidth={1.2}
+                                lineCap="round"
+                            />
+                            <Line
+                                points={[
+                                    baseX + (cellSize * 0.58),
+                                    baseY + (cellSize * 0.28),
+                                    baseX + (cellSize * 0.78),
+                                    baseY + (cellSize * 0.72)
+                                ]}
+                                stroke="rgba(255, 255, 255, 0.35)"
+                                strokeWidth={1}
+                                lineCap="round"
+                            />
+                        </Group>
+                    )}
                 </Group>
             );
         });
@@ -140,60 +227,75 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
 
     const drawDiamondObjective = useCallback(() => (
         <Group listening={false}>
-            {[
-                { x: cellSize * 4, y: cellSize * 3 },
-                { x: cellSize * 5, y: cellSize * 3 },
-                { x: cellSize * 4, y: cellSize * 4 },
-                { x: cellSize * 5, y: cellSize * 4 }
-            ].map(({ x, y }, index) => (
-                <Rect
-                    key={`goal-square-${index}`}
-                    x={x + (cellSize * 0.08)}
-                    y={y + (cellSize * 0.08)}
-                    width={cellSize * 0.84}
-                    height={cellSize * 0.84}
-                    cornerRadius={cellSize * 0.18}
-                    stroke="#6BF1FF"
-                    strokeWidth={1.6}
-                    opacity={0.5}
-                />
-            ))}
-            <Rect
-                x={cellSize * 4.28}
-                y={cellSize * 3.35}
-                width={cellSize * 1.44}
-                height={cellSize * 1.32}
-                cornerRadius={cellSize * 0.22}
-                fill="rgba(11, 29, 58, 0.94)"
-                stroke="#6BF1FF"
-                strokeWidth={2.2}
-                shadowEnabled={true}
-                shadowColor="#5FF5FF"
-                shadowBlur={24}
-            />
             <Circle
                 x={cellSize * 5}
                 y={cellSize * 4}
-                radius={cellSize * 0.95}
-                fill="rgba(95, 245, 255, 0.2)"
+                radius={cellSize * 1.15}
+                fill="rgba(95, 245, 255, 0.18)"
                 shadowEnabled={true}
                 shadowColor="#5FF5FF"
-                shadowBlur={42}
+                shadowBlur={54}
             />
-            <RegularPolygon
-                x={cellSize * 5}
-                y={cellSize * 4.18}
-                sides={4}
-                radius={cellSize * 0.22}
-                rotation={45}
-                fill="#16314B"
+            <Rect
+                x={cellSize * 4.2}
+                y={cellSize * 4.2}
+                width={cellSize * 1.6}
+                height={cellSize * 0.48}
+                cornerRadius={cellSize * 0.12}
+                fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+                fillLinearGradientEndPoint={{ x: 0, y: cellSize * 0.48 }}
+                fillLinearGradientColorStops={[0, "#2A1D3B", 1, "#130A1E"]}
+                stroke="#B25CFF"
+                strokeWidth={2}
+                shadowEnabled={true}
+                shadowColor="#B25CFF"
+                shadowBlur={20}
+                shadowOpacity={0.6}
+            />
+            <Rect
+                x={cellSize * 4.38}
+                y={cellSize * 4.28}
+                width={cellSize * 1.24}
+                height={cellSize * 0.22}
+                cornerRadius={cellSize * 0.05}
+                fill="#0B1A2E"
+                stroke="#68E0FF"
+                strokeWidth={1.2}
                 opacity={0.9}
             />
+            <Circle
+                x={cellSize * 4.4}
+                y={cellSize * 4.74}
+                radius={cellSize * 0.09}
+                fill="#F5D66B"
+                stroke="#3C2A10"
+                strokeWidth={1}
+            />
+            <Circle
+                x={cellSize * 5.6}
+                y={cellSize * 4.74}
+                radius={cellSize * 0.09}
+                fill="#F5D66B"
+                stroke="#3C2A10"
+                strokeWidth={1}
+            />
+            <Rect
+                x={cellSize * 4.76}
+                y={cellSize * 3.5}
+                width={cellSize * 0.48}
+                height={cellSize * 0.24}
+                cornerRadius={cellSize * 0.04}
+                fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+                fillLinearGradientEndPoint={{ x: 0, y: cellSize * 0.24 }}
+                fillLinearGradientColorStops={[0, "#3C2453", 1, "#1B0F28"]}
+                stroke="#B25CFF"
+                strokeWidth={1}
+            />
             <RegularPolygon
                 x={cellSize * 5}
-                y={cellSize * 3.92}
+                y={cellSize * 3.58}
                 sides={4}
-                radius={cellSize * 0.42}
+                radius={cellSize * 0.38}
                 rotation={45}
                 fillLinearGradientStartPoint={{ x: -cellSize * 0.28, y: -cellSize * 0.28 }}
                 fillLinearGradientEndPoint={{ x: cellSize * 0.28, y: cellSize * 0.28 }}
@@ -203,16 +305,10 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                 shadowBlur={34}
             />
             <Line
-                points={[cellSize * 5, cellSize * 3.18, cellSize * 5, cellSize * 4.82]}
-                stroke="#8EEFFF"
-                strokeWidth={1.2}
-                opacity={0.8}
-            />
-            <Line
-                points={[cellSize * 4.18, cellSize * 4, cellSize * 5.82, cellSize * 4]}
-                stroke="#8EEFFF"
-                strokeWidth={1.2}
-                opacity={0.8}
+                points={[cellSize * 5, cellSize * 3.2, cellSize * 5, cellSize * 3.96]}
+                stroke="#C8F4FF"
+                strokeWidth={1}
+                opacity={0.55}
             />
         </Group>
     ), [cellSize]);
@@ -253,20 +349,19 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
             const board = new Board({ squares });
             const movesForSelectedPiece = board.getMovesForPieceAtLocation(selectedPieceLocation);
 
+            const ringColor = currentPlayer === PlayerTypesEnum.BLUE ? "#79C6FF" : "#FF9BB5";
             const selectedPieceHighlight = (
-                <Rect
+                <Circle
                     key="selectedPiece"
-                    stroke="#F6E88F"
-                    cornerRadius={cellSize * 0.12}
+                    stroke={ringColor}
                     shadowEnabled={true}
-                    shadowColor="#F6E88F"
+                    shadowColor={ringColor}
                     shadowBlur={18}
                     listening={false}
-                    strokeWidth={2}
-                    width={cellSize * 0.84}
-                    height={cellSize * 0.84}
-                    x={(selectedPieceLocation.colIndex * cellSize) + (cellSize * 0.08)}
-                    y={(selectedPieceLocation.rowIndex * cellSize) + (cellSize * 0.08)}
+                    strokeWidth={3}
+                    radius={cellSize * 0.5}
+                    x={(selectedPieceLocation.colIndex * cellSize) + (cellSize / 2)}
+                    y={(selectedPieceLocation.rowIndex * cellSize) + (cellSize / 2)}
                 />
             );
 
@@ -287,7 +382,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
 
             return [possibleMovesHighlights, selectedPieceHighlight];
         }
-    }, [cellSize, dispatch, placementModeActive, reference, selectedPieceLocation, squares]);
+    }, [cellSize, currentPlayer, dispatch, placementModeActive, reference, selectedPieceLocation, squares]);
 
     const drawDeployHighlights = useCallback(() => {
         if (!pendingPlacement) {
