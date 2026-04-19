@@ -9,6 +9,7 @@ import { flatMap, isEmpty } from "lodash";
 import { applyMovement, deployMirror, selectPiece, unselectPiece } from "../redux/slices/gameSlice";
 import Board, { isDiamondGoalLocation } from "../models/Board";
 import PieceMoveHighlight from "./PieceMoveHighlight";
+import DeflectorDirectionOverlay from "./DeflectorDirectionOverlay";
 import {
     ACTIVE_BOARD_COL_OFFSET,
     ACTIVE_BOARD_COLS,
@@ -570,45 +571,40 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
 
         const board = new Board({ squares, offboardPieces });
         const deployLocations = board.getDeployLocationsForPlayer(pendingPlacement.playerType, PieceTypesEnum.DEFLECTOR);
-        const isBackslashMirror = pendingPlacement.orientation === 0 || pendingPlacement.orientation === 180;
+        const previewAccent = pendingPlacement.playerType === PlayerTypesEnum.BLUE ? "#8CD8FF" : "#FF9DB3";
+        const previewGlow = pendingPlacement.playerType === PlayerTypesEnum.BLUE ? "#61F3FF" : "#FF7D9A";
 
         return deployLocations.map((location) => {
-            const x = location.colIndex * cellSize;
-            const y = location.rowIndex * cellSize;
-            const inset = cellSize * 0.14;
-            const points = isBackslashMirror
-                ? [inset, inset, cellSize - inset, cellSize - inset]
-                : [cellSize - inset, inset, inset, cellSize - inset];
+            const x = (location.colIndex * cellSize) + (cellSize / 2);
+            const y = (location.rowIndex * cellSize) + (cellSize / 2);
 
             return (
                 <Group
                     key={`deploy--${location.an}`}
                     x={x}
                     y={y}
+                    rotation={pendingPlacement.orientation}
                     onClick={() => dispatch(deployMirror({ location }))}
                     onTap={() => dispatch(deployMirror({ location }))}
                 >
                     <Rect
-                        x={cellSize * 0.1}
-                        y={cellSize * 0.1}
+                        x={-(cellSize * 0.4)}
+                        y={-(cellSize * 0.4)}
                         width={cellSize * 0.8}
                         height={cellSize * 0.8}
                         cornerRadius={cellSize * 0.16}
                         fill="rgba(97, 243, 255, 0.08)"
                         stroke="#61F3FF"
-                        strokeWidth={1.8}
+                        strokeWidth={2.2}
                         shadowEnabled={true}
                         shadowColor="#61F3FF"
                         shadowBlur={16}
                     />
-                    <Line
-                        points={points}
-                        stroke="#DDFBFF"
-                        strokeWidth={2.8}
-                        lineCap="round"
-                        shadowEnabled={true}
-                        shadowColor="#61F3FF"
-                        shadowBlur={14}
+                    <DeflectorDirectionOverlay
+                        cellSize={cellSize}
+                        color={previewAccent}
+                        glowColor={previewGlow}
+                        opacity={0.92}
                     />
                 </Group>
             );

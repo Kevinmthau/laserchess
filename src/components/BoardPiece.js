@@ -4,10 +4,11 @@ import Konva from "konva";
 import Location from "../models/Location";
 import useImage from "use-image";
 import { MovementTypesEnum, PieceTypesEnum, PlayerTypesEnum } from "../models/Enums";
-import { Image } from "react-konva";
+import { Group, Image } from "react-konva";
 import Board from "../models/Board";
 import BlueBurglarSVG from "../assets/pieces/blue-burglar.svg";
 import RedBurglarSVG from "../assets/pieces/red-burglar.svg";
+import DeflectorDirectionOverlay from "./DeflectorDirectionOverlay";
 import {
 	ACTIVE_BOARD_COL_OFFSET,
 	ACTIVE_BOARD_ROW_OFFSET,
@@ -34,6 +35,7 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 		: `https://laserchess.s3.us-east-2.amazonaws.com/pieces/${piece.imageName}.svg`;
 	const [pieceImage] = useImage(pieceImageSource);
 	const pieceGlowColor = piece.color === PlayerTypesEnum.BLUE ? "#6FE7FF" : "#FF7A99";
+	const deflectorBackBorderColor = piece.color === PlayerTypesEnum.BLUE ? "#8CD8FF" : "#FF9DB3";
 	const pieceGlowBlur = piece.type === PieceTypesEnum.KING ? 22 : 10;
 	const renderedPosition = useCallback(() => {
 		if (piece.type === PieceTypesEnum.LASER) {
@@ -73,7 +75,7 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 
 
 	return (
-		<Image draggable={piece.type !== PieceTypesEnum.LASER}
+		<Group draggable={piece.type !== PieceTypesEnum.LASER}
 			id={id}
 			onTap={selectThePiece}
 			onClick={selectThePiece}
@@ -204,22 +206,30 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 				const container = e.target.getStage().container();
 				container.style.cursor = "grab";
 			}}
-			offset={{
-				x: cellSize / 2,
-				y: cellSize / 2,
-			}}
-			image={pieceImage}
-			rotation={piece.orientation}
-			shadowEnabled={true}
-			shadowColor={pieceGlowColor}
-			shadowBlur={pieceGlowBlur}
-			shadowOpacity={0.65}
 			listening={(piece.color === currentPlayer) && (!movementIsLocked)}
 			x={renderedPosition().x}
 			y={renderedPosition().y}
-			width={cellSize}
-			height={cellSize}
-		/>
+			rotation={piece.orientation}
+		>
+			<Image
+				x={-(cellSize / 2)}
+				y={-(cellSize / 2)}
+				image={pieceImage}
+				shadowEnabled={true}
+				shadowColor={pieceGlowColor}
+				shadowBlur={pieceGlowBlur}
+				shadowOpacity={0.65}
+				width={cellSize}
+				height={cellSize}
+			/>
+			{piece.type === PieceTypesEnum.DEFLECTOR && (
+				<DeflectorDirectionOverlay
+					cellSize={cellSize}
+					color={deflectorBackBorderColor}
+					glowColor={pieceGlowColor}
+				/>
+			)}
+		</Group>
 	);
 };
 
