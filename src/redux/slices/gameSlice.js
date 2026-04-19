@@ -1,15 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { PlayerTypesEnum, GameStatusEnum } from "../../models/Enums";
-import Board from "../../models/Board";
+import { PlayerTypesEnum, GameStatusEnum, PieceTypesEnum } from "../../models/Enums";
+import Board, { DEFAULT_BOARD_SN, MIRROR_RESERVE_COUNT } from "../../models/Board";
 
-/** 
- * The default board setup (ACE).
- * TODO: Make it dynamic, so the player can choose between different board setups.
- * ? In future, consider allowing the user to create their own board setup!
- * @constant {string}
- * @default
- */
-const DEFAULT_BOARD_SN = "l++3d++kd++b+++2/2b7/3B+6/b++1B1ss+1b+++1B+/b+++1B+1S+S1b++1B/6b+++3/7B++2/2B+DKD3L";
+const initialMirrorReserve = () => ({
+    [PlayerTypesEnum.BLUE]: MIRROR_RESERVE_COUNT,
+    [PlayerTypesEnum.RED]: MIRROR_RESERVE_COUNT
+});
 
 
 const gameSlice = createSlice({
@@ -19,7 +15,10 @@ const gameSlice = createSlice({
         currentPlayer: PlayerTypesEnum.BLUE, // The current player
         status: GameStatusEnum.PLAYING,
         winner: "", // 🎉 this is replaced with either PlayerTypesEnum.BLUE or PlayerTypesEnum.RED when one of them wins by killing the opponent's king!
+        winnerReason: null,
         squares: [],
+        mirrorReserve: initialMirrorReserve(),
+        pendingPlacement: null,
 
         selectedPieceLocation: null, // keeps track of the location where the selected piece is. It is NULL when no piece is selected.
         movementIsLocked: false, // when true, no player can move any piece. Usually becomes true when the laser is triggered and changing to another piece
@@ -43,8 +42,12 @@ const gameSlice = createSlice({
         setBoardType: (state, action) => {
             const newBoard = new Board(action.payload).serialize();
             state.squares = newBoard.squares;
-            state.winner = newBoard.winner;
+            state.winner = newBoard.winner || "";
+            state.winnerReason = newBoard.winnerReason;
             state.sn = newBoard.sn;
+            state.mirrorReserve = initialMirrorReserve();
+            state.pendingPlacement = null;
+            state.selectedPieceLocation = null;
         },
 
         /**
@@ -55,14 +58,86 @@ const gameSlice = createSlice({
          */
         applyMovement: (state, action) => {
             state.movementIsLocked = true;
+            state.pendingPlacement = null;
 
             // Lock the move until finished (or laser stopped)
             const { movement } = action.payload;
             const newBoard = new Board({ squares: state.squares });
 
             newBoard.applyMovement(movement);
+            const serializedBoard = newBoard.serialize();
+            if (serializedBoard.winner) {
+                state.winner = serializedBoard.winner || "";
+                state.winnerReason = serializedBoard.winnerReason;
+                state.sn = serializedBoard.sn;
+                state.squares = serializedBoard.squares;
+                state.status = GameStatusEnum.GAME_OVER;
+                state.laser.route = [];
+                state.laser.finalActionType = null;
+                state.laser.finalLocation = null;
+                return;
+            }
+
             const route = newBoard.getLaserRoute(state.currentPlayer);
 
+            state.laser.triggered = true;
+            state.laser.route = route;
+
+            const lastLaserRoutePath = route[route.length - 1];
+            state.laser.finalActionType = lastLaserRoutePath.actionType;
+            state.laser.finalLocation = lastLaserRoutePath.location;
+        },
+
+        startMirrorPlacement: (state) => {
+            if (state.movementIsLocked || state.mirrorReserve[state.currentPlayer] <= 0) {
+                return;
+            }
+
+            state.selectedPieceLocation = null;
+            if (state.pendingPlacement?.playerType === state.currentPlayer) {
+                state.pendingPlacement = null;
+                return;
+            }
+
+            state.pendingPlacement = {
+                playerType: state.currentPlayer,
+                pieceType: PieceTypesEnum.DEFLECTOR,
+                orientation: 0
+            };
+        },
+
+        cancelMirrorPlacement: (state) => {
+            state.pendingPlacement = null;
+        },
+
+        rotatePendingPlacement: (state, action) => {
+            if (!state.pendingPlacement) {
+                return;
+            }
+
+            const clockwise = action.payload?.clockwise !== false;
+            const delta = clockwise ? 90 : -90;
+            state.pendingPlacement.orientation = (state.pendingPlacement.orientation + delta + 360) % 360;
+        },
+
+        deployMirror: (state, action) => {
+            if (!state.pendingPlacement) {
+                return;
+            }
+
+            const { location } = action.payload;
+            const { playerType, pieceType, orientation } = state.pendingPlacement;
+            const newBoard = new Board({ squares: state.squares });
+            if (!newBoard.canDeployPiece(location, playerType, pieceType)) {
+                return;
+            }
+
+            state.movementIsLocked = true;
+            newBoard.deployPiece(location, pieceType, playerType, orientation);
+            state.pendingPlacement = null;
+            state.mirrorReserve[playerType] -= 1;
+
+            const route = newBoard.getLaserRoute(state.currentPlayer);
             state.laser.triggered = true;
             state.laser.route = route;
 
@@ -85,7 +160,8 @@ const gameSlice = createSlice({
             newBoard.applyLaser(state.currentPlayer);
             const serializedBoard = newBoard.serialize();
 
-            state.winner = serializedBoard.winner;
+            state.winner = serializedBoard.winner || "";
+            state.winnerReason = serializedBoard.winnerReason;
             state.sn = serializedBoard.sn;
             state.squares = serializedBoard.squares;
 
@@ -100,6 +176,7 @@ const gameSlice = createSlice({
                 state.laser.route = [];
                 state.laser.finalActionType = null;
                 state.laser.finalLocation = null;
+                state.pendingPlacement = null;
 
                 // If game is not over, then pass the turn to the next player
                 state.currentPlayer = (state.currentPlayer === PlayerTypesEnum.BLUE) ? PlayerTypesEnum.RED : PlayerTypesEnum.BLUE;
@@ -122,6 +199,7 @@ const gameSlice = createSlice({
         selectPiece: (state, action) => {
             const { location } = action.payload;
             state.selectedPieceLocation = location;
+            state.pendingPlacement = null;
         },
 
         /**
@@ -158,7 +236,10 @@ const gameSlice = createSlice({
             state.currentPlayer = PlayerTypesEnum.BLUE;
             state.status = GameStatusEnum.PLAYING;
             state.winner = "";
+            state.winnerReason = null;
             state.squares = newBoard.squares;
+            state.mirrorReserve = initialMirrorReserve();
+            state.pendingPlacement = null;
             state.selectedPieceLocation = null;
             state.movementIsLocked = false;
             state.laser = {
@@ -179,6 +260,10 @@ export const {
     resume,
     setBoardType,
     applyMovement,
+    startMirrorPlacement,
+    cancelMirrorPlacement,
+    rotatePendingPlacement,
+    deployMirror,
     selectPiece,
     unselectPiece,
     resetGame,

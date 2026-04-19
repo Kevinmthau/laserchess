@@ -1,0 +1,25 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="redGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(80 80) rotate(90) scale(80)">
+      <stop stop-color="#FFD0D8" stop-opacity="0.95"/>
+      <stop offset="0.55" stop-color="#FF5A86" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#2B0817" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="redBadge" x1="32" y1="24" x2="128" y2="136" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE4EA"/>
+      <stop offset="0.45" stop-color="#FF97B0"/>
+      <stop offset="1" stop-color="#FF4C7B"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="76" fill="url(#redGlow)"/>
+  <circle cx="80" cy="80" r="55" fill="#260A16" stroke="url(#redBadge)" stroke-width="8"/>
+  <path d="M52 58C55.5 43 67.5 34 80 34C92.5 34 104.5 43 108 58L101 63H59L52 58Z" fill="#5A1330"/>
+  <path d="M60 72C60 60.9543 68.9543 52 80 52C91.0457 52 100 60.9543 100 72V98H60V72Z" fill="#F7DECF"/>
+  <path d="M49 73C49 58.0883 61.0883 46 76 46H84C98.9117 46 111 58.0883 111 73V82L96 92H64L49 82V73Z" fill="#2C0C19"/>
+  <circle cx="71" cy="73" r="5.5" fill="#FFD6E0"/>
+  <circle cx="89" cy="73" r="5.5" fill="#FFD6E0"/>
+  <path d="M66 89C69.5 93 74 95 80 95C86 95 90.5 93 94 89" stroke="#25180E" stroke-width="5" stroke-linecap="round"/>
+  <path d="M57 101C64 94 72 91 80 91C88 91 96 94 103 101V111H57V101Z" fill="#41101F"/>
+  <path d="M62 37H98L103 49H57L62 37Z" fill="#4F1330"/>
+  <rect x="67" y="27" width="26" height="18" rx="8" fill="#6B183A"/>
+</svg>

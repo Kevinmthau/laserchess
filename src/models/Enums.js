@@ -29,6 +29,11 @@ export const GameStatusEnum = Object.freeze({
     GAME_OVER: "gameover"
 });
 
+export const WinReasonsEnum = Object.freeze({
+    DIAMOND: "diamond",
+    LASER: "laser"
+});
+
 
 
 /**
@@ -84,6 +89,7 @@ export const MovementTypesEnum = Object.freeze({
     INVALID: "invalid", // indicates an invalid move. This can be when the destLocation is not a valid square on the board
     NORMAL: "normal", // indicates the normal move. Simply from one location to another.
     SPECIAL: "special", // indicates the special move made by the Switch piece. Swap!
+    DEPLOY: "deploy", // indicates placing a reserve piece onto an empty square
     ROTATION_CLOCKWISE: "clockwise_rotation", // indicates a clockwise rotation of a piece at src.
     ROTATION_C_CLOCKWISE: "c_clockwise_rotation" // indicates a counter-clockwise rotation of the piece at src.
 });

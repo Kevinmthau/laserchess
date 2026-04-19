@@ -1,28 +1,43 @@
 import React from "react";
-import { Image } from "react-konva";
-import useImage from "use-image";
-import SpecialMoveSVG from "../assets/special-move-highlight.svg";
-import NormalMoveSVG from "../assets/normal-move-highlight.svg";
+import { Circle, Group, Rect } from "react-konva";
 import { MovementTypesEnum } from "../models/Enums";
 
 const PieceMoveHighlight = ({ cellSize, movement, onChoose }) => {
-
-    const [specialMoveSVG] = useImage(SpecialMoveSVG);
-    const [normalMoveSVG] = useImage(NormalMoveSVG);
+    const isSpecialMove = movement.type === MovementTypesEnum.SPECIAL;
+    const accent = isSpecialMove ? "#FF7A99" : "#61F3FF";
+    const inset = cellSize * 0.16;
 
     return (
-        <Image image={movement.type === MovementTypesEnum.NORMAL ? normalMoveSVG : specialMoveSVG}
+        <Group
             x={movement.destLocation.colIndex * cellSize}
             y={movement.destLocation.rowIndex * cellSize}
             onClick={() => onChoose(movement)}
             onTap={() => onChoose(movement)}
-            fill="#16db6576"
-            width={cellSize}
-            height={cellSize} />
+        >
+            <Rect
+                x={inset}
+                y={inset}
+                width={cellSize - (inset * 2)}
+                height={cellSize - (inset * 2)}
+                cornerRadius={cellSize * 0.16}
+                stroke={accent}
+                strokeWidth={2}
+                shadowEnabled={true}
+                shadowColor={accent}
+                shadowBlur={14}
+                opacity={0.95}
+            />
+            <Circle
+                x={cellSize / 2}
+                y={cellSize / 2}
+                radius={isSpecialMove ? cellSize * 0.12 : cellSize * 0.09}
+                fill={accent}
+                shadowEnabled={true}
+                shadowColor={accent}
+                shadowBlur={18}
+            />
+        </Group>
     );
-
-
-
 };
 
 export default PieceMoveHighlight;

@@ -1,10 +1,10 @@
-import { LaserDirectionsEnum, PlayerTypesEnum, MovementTypesEnum, LaserActionTypesEnum, PieceTypesEnum, LaserEventsEnum, SquareTypesEnum } from "./Enums";
+import { LaserDirectionsEnum, PlayerTypesEnum, MovementTypesEnum, LaserActionTypesEnum, PieceTypesEnum, LaserEventsEnum, SquareTypesEnum, WinReasonsEnum } from "./Enums";
 import Location from "./Location";
-import { PieceUtils } from "./Piece";
+import Piece, { PieceUtils } from "./Piece";
 import { SquareUtils } from "./Square";
 import SN from "../utils/SN";
 import LHAN from "../utils/LHAN";
-import { flatMap, toLower, toUpper } from "lodash";
+import { flatMap, repeat, toLower, toUpper } from "lodash";
 import Movement from "./Movement";
 import LaserPath from "./LaserPath";
 import { point, polygon } from "@turf/helpers";
@@ -16,7 +16,12 @@ import { pieceAnimDuration, pieceAnimEasing } from "../components/BoardPiece";
  * @constant
  * Ace
  */
-const DEFAULT_BOARD_SN = "l++3d++kd++b+++2/2b7/3B+6/b++1B1ss+1b+++1B+/b+++1B+1S+S1b++1B/6b+++3/7B++2/2B+DKD3L";
+export const DEFAULT_BOARD_SN = "l++3dkd3/*/*/*/*/*/*/3DKD3L";
+export const MIRROR_RESERVE_COUNT = 3;
+
+export const DIAMOND_GOAL_ANS = Object.freeze(["e5", "f5", "e4", "f4"]);
+const DIAMOND_GOAL_SET = new Set(DIAMOND_GOAL_ANS);
+export const isDiamondGoalLocation = (location) => Boolean(location && DIAMOND_GOAL_SET.has(location.an));
 
 /**
  * @constant
@@ -61,6 +66,7 @@ class Board {
             this.squares = SN.parse(DEFAULT_BOARD_SN);
         }
         this.winner = null;
+        this.winnerReason = null;
     }
 
 
@@ -335,14 +341,7 @@ class Board {
         const pieceTypeAtDest = squareAtDest.piece ? squareAtDest.piece.type : null;
         const pieceColorAtSrc = squareAtSrc.piece.color;
 
-        if (squareAtDest.type === SquareTypesEnum.RESERVED_BLUE && pieceColorAtSrc !== PlayerTypesEnum.BLUE) {
-            // Trying to make a movement to a square reserved for blue player pieces only,
-            // with a red player's piece.
-            return new Movement(MovementTypesEnum.INVALID, srcLocation, destLocation);
-
-        } else if (squareAtDest.type === SquareTypesEnum.RESERVED_RED && pieceColorAtSrc !== PlayerTypesEnum.RED) {
-            // Trying to make a movement to a square reserved for red player pieces only,
-            // with a blue player's piece.
+        if (!this.canPlayerOccupySquare(squareAtDest, pieceColorAtSrc, pieceTypeAtSrc)) {
             return new Movement(MovementTypesEnum.INVALID, srcLocation, destLocation);
         }
 
@@ -376,14 +375,20 @@ class Board {
      * @param {Movement} movement the movement to be applied on the board
      */
     applyMovement(movement) {
-        const squareAtSrc = this.getSquare(movement.srcLocation);
         // Check what type of move is being performed
+        if (movement.type === MovementTypesEnum.DEPLOY) {
+            this.deployPiece(movement.destLocation, movement.pieceType, movement.playerType, movement.orientation);
+            return;
+        }
+
+        const squareAtSrc = this.getSquare(movement.srcLocation);
         if (movement.type === MovementTypesEnum.NORMAL) { // dislocate
             // Normal movement (from one square to an empty one)
             const squareAtDest = this.squares[movement.destLocation.rowIndex][movement.destLocation.colIndex];
             // Move the piece from the src to dest.
             squareAtDest.piece = squareAtSrc.piece;
             squareAtSrc.piece = null;
+            this.applyDiamondObjective(squareAtDest);
 
         } else if (movement.type === MovementTypesEnum.ROTATION_CLOCKWISE) {
             // Rotation movement (clockwise)
@@ -403,6 +408,7 @@ class Board {
             const squareAtSrcPiece = squareAtSrc.piece;
             squareAtSrc.piece = squareAtDest.piece;
             squareAtDest.piece = squareAtSrcPiece;
+
         }
     }
 
@@ -431,6 +437,7 @@ class Board {
                 // Check which king is dead and declare the winner! 🏴‍☠️
                 const winnerPlayerColor = squareAtHit.piece.color === PlayerTypesEnum.BLUE ? PlayerTypesEnum.RED : PlayerTypesEnum.BLUE;
                 this.winner = winnerPlayerColor;
+                this.winnerReason = WinReasonsEnum.LASER;
 
             }
             // Remove the piece from the square.
@@ -447,7 +454,9 @@ class Board {
     newBoardFromMovement(movement, playerType) {
         const newBoard = new Board({ setupNotation: this.toSN() }); // clone this board
         newBoard.applyMovement(movement);
-        newBoard.applyLaser(playerType);
+        if (!newBoard.winner) {
+            newBoard.applyLaser(playerType);
+        }
         return newBoard;
     }
 
@@ -480,7 +489,7 @@ class Board {
 
                     // orientation?
                     const orientation = square.piece.orientation;
-                    sn += _.repeat("+", orientation / 90);
+                    sn += repeat("+", orientation / 90);
 
                 } else {
                     emptySquaresCount += 1;
@@ -508,9 +517,68 @@ class Board {
     serialize() {
         return {
             winner: this.winner,
+            winnerReason: this.winnerReason,
             squares: this.squares,
             sn: this.toSN() // setup notation
         };
+    }
+
+    applyDiamondObjective(squareAtDest) {
+        if (
+            SquareUtils.hasPiece(squareAtDest) &&
+            squareAtDest.piece.type === PieceTypesEnum.KING &&
+            isDiamondGoalLocation(squareAtDest.location)
+        ) {
+            this.winner = squareAtDest.piece.color;
+            this.winnerReason = WinReasonsEnum.DIAMOND;
+        }
+    }
+
+    canPlayerOccupySquare(square, playerType, pieceType) {
+        if (!square) {
+            return false;
+        }
+
+        if (square.type === SquareTypesEnum.RESERVED_BLUE && playerType !== PlayerTypesEnum.BLUE) {
+            return false;
+        }
+
+        if (square.type === SquareTypesEnum.RESERVED_RED && playerType !== PlayerTypesEnum.RED) {
+            return false;
+        }
+
+        if (isDiamondGoalLocation(square.location) && pieceType !== PieceTypesEnum.KING) {
+            return false;
+        }
+
+        return true;
+    }
+
+    canDeployPiece(location, playerType, pieceType = PieceTypesEnum.DEFLECTOR) {
+        const squareAtDest = this.getSquare(location);
+        if (!squareAtDest || SquareUtils.hasPiece(squareAtDest)) {
+            return false;
+        }
+
+        return this.canPlayerOccupySquare(squareAtDest, playerType, pieceType);
+    }
+
+    getDeployLocationsForPlayer(playerType, pieceType = PieceTypesEnum.DEFLECTOR) {
+        return flatMap(this.squares)
+            .filter(square => this.canDeployPiece(square.location, playerType, pieceType))
+            .map(square => square.location);
+    }
+
+    deployPiece(location, pieceType, playerType, orientation = 0) {
+        const normalizedPieceType = pieceType.toLowerCase();
+        if (!this.canDeployPiece(location, playerType, normalizedPieceType)) {
+            return false;
+        }
+
+        const pieceNotationType = playerType === PlayerTypesEnum.BLUE ? toUpper(normalizedPieceType) : toLower(normalizedPieceType);
+        const squareAtDest = this.getSquare(location);
+        squareAtDest.piece = new Piece(pieceNotationType, orientation).serialize();
+        return true;
     }
 
 

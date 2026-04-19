@@ -1,12 +1,13 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { isEqual } from "lodash";
 import Konva from "konva";
 import Location from "../models/Location";
-import Movement from "../models/Movement";
 import useImage from "use-image";
-import { MovementTypesEnum, PieceTypesEnum } from "../models/Enums";
+import { MovementTypesEnum, PieceTypesEnum, PlayerTypesEnum } from "../models/Enums";
 import { Image } from "react-konva";
 import Board from "../models/Board";
+import BlueBurglarSVG from "../assets/pieces/blue-burglar.svg";
+import RedBurglarSVG from "../assets/pieces/red-burglar.svg";
 
 /**
  * @constant
@@ -22,7 +23,12 @@ export const pieceAnimEasing = Konva.Easings.BackEaseOut;
 
 const BoardPiece = ({ id, square: { piece, location }, squares, onMove, onSelect, onGrab, cellSize, currentPlayer, movementIsLocked }) => {
 	const [lastXY, setLastXY] = useState({ x: undefined, y: undefined });
-	const [pieceImage] = useImage(`https://laserchess.s3.us-east-2.amazonaws.com/pieces/${piece.imageName}.svg`);
+	const pieceImageSource = piece.type === PieceTypesEnum.KING
+		? (piece.color === PlayerTypesEnum.BLUE ? BlueBurglarSVG : RedBurglarSVG)
+		: `https://laserchess.s3.us-east-2.amazonaws.com/pieces/${piece.imageName}.svg`;
+	const [pieceImage] = useImage(pieceImageSource);
+	const pieceGlowColor = piece.color === PlayerTypesEnum.BLUE ? "#6FE7FF" : "#FF7A99";
+	const pieceGlowBlur = piece.type === PieceTypesEnum.KING ? 22 : 10;
 
 
 	useEffect(() => {
@@ -181,6 +187,10 @@ const BoardPiece = ({ id, square: { piece, location }, squares, onMove, onSelect
 			}}
 			image={pieceImage}
 			rotation={piece.orientation}
+			shadowEnabled={true}
+			shadowColor={pieceGlowColor}
+			shadowBlur={pieceGlowBlur}
+			shadowOpacity={0.65}
 			listening={(piece.color === currentPlayer) && (!movementIsLocked)}
 			x={Location.getX(location.colIndex, cellSize)}
 			y={Location.getY(location.rowIndex, cellSize)}
