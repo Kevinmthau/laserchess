@@ -157,7 +157,11 @@ const gameSlice = createSlice({
          */
         finishMovement: (state) => {
             const newBoard = new Board({ squares: state.squares });
-            newBoard.applyLaser(state.currentPlayer);
+            if (state.laser.finalLocation) {
+                newBoard.applyLaserHit(state.laser.finalActionType, state.laser.finalLocation);
+            } else {
+                newBoard.applyLaser(state.currentPlayer);
+            }
             const serializedBoard = newBoard.serialize();
 
             state.winner = serializedBoard.winner || "";

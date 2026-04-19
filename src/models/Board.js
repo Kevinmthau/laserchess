@@ -414,6 +414,36 @@ class Board {
 
 
     /**
+     * Applies a resolved laser hit to the current board.
+     *
+     * @param {LaserActionTypesEnum} actionType the final action resolved for the laser route.
+     * @param {Location|Object} location the final location reached by the laser route.
+     */
+    applyLaserHit(actionType, location) {
+        if (actionType !== LaserActionTypesEnum.KILL || !location) {
+            return;
+        }
+
+        const squareAtHit = this.getSquare(location);
+        if (!SquareUtils.hasPiece(squareAtHit)) {
+            return;
+        }
+
+        // Check if we killed the King!
+        if (squareAtHit.piece.type === PieceTypesEnum.KING) {
+            // Oh lord, the king is dead, I repeat, the king is dead!
+            // Check which king is dead and declare the winner! 🏴‍☠️
+            const winnerPlayerColor = squareAtHit.piece.color === PlayerTypesEnum.BLUE ? PlayerTypesEnum.RED : PlayerTypesEnum.BLUE;
+            this.winner = winnerPlayerColor;
+            this.winnerReason = WinReasonsEnum.LASER;
+        }
+
+        // Remove the piece from the square.
+        squareAtHit.piece = null;
+    }
+
+
+    /**
      * Applies the laser hit action notation in the current board.
      * 
      * @param {PlayerTypesEnum} playerType the player whose laser is being switched on.
@@ -428,21 +458,7 @@ class Board {
         const laserRoute = this.getLaserRoute(playerType);
         const finalLaserPath = laserRoute[laserRoute.length - 1];
 
-        // handle the laser hit
-        if (finalLaserPath.actionType === LaserActionTypesEnum.KILL) {
-            const squareAtHit = this.squares[finalLaserPath.location.rowIndex][finalLaserPath.location.colIndex];
-            // Check if we killed the King!
-            if (squareAtHit.piece.type === PieceTypesEnum.KING) {
-                // Oh lord, the king is dead, I repeat, the king is dead!
-                // Check which king is dead and declare the winner! 🏴‍☠️
-                const winnerPlayerColor = squareAtHit.piece.color === PlayerTypesEnum.BLUE ? PlayerTypesEnum.RED : PlayerTypesEnum.BLUE;
-                this.winner = winnerPlayerColor;
-                this.winnerReason = WinReasonsEnum.LASER;
-
-            }
-            // Remove the piece from the square.
-            squareAtHit.piece = null;
-        }
+        this.applyLaserHit(finalLaserPath.actionType, finalLaserPath.location);
     }
 
 

@@ -7,10 +7,10 @@
             "270": "nothing"
         },
         "d": {
-            "0": "kill",
-            "90": "kill",
-            "180": "kill",
-            "270": "kill"
+            "0": "nothing",
+            "90": "nothing",
+            "180": "nothing",
+            "270": "nothing"
         },
         "b": {
             "0": "left",
@@ -39,10 +39,10 @@
             "270": "nothing"
         },
         "d": {
-            "0": "kill",
-            "90": "kill",
-            "180": "kill",
-            "270": "kill"
+            "0": "nothing",
+            "90": "nothing",
+            "180": "nothing",
+            "270": "nothing"
         },
         "b": {
             "0": "bottom",
@@ -71,10 +71,10 @@
             "270": "nothing"
         },
         "d": {
-            "0": "kill",
-            "90": "kill",
-            "180": "kill",
-            "270": "kill"
+            "0": "nothing",
+            "90": "nothing",
+            "180": "nothing",
+            "270": "nothing"
         },
         "b": {
             "0": "kill",
@@ -103,10 +103,10 @@
             "270": "nothing"
         },
         "d": {
-            "0": "kill",
-            "90": "kill",
-            "180": "kill",
-            "270": "kill"
+            "0": "nothing",
+            "90": "nothing",
+            "180": "nothing",
+            "270": "nothing"
         },
         "b": {
             "0": "kill",
