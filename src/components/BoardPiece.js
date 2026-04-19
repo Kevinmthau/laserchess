@@ -9,6 +9,7 @@ import Board from "../models/Board";
 import BlueBurglarSVG from "../assets/pieces/blue-burglar.svg";
 import RedBurglarSVG from "../assets/pieces/red-burglar.svg";
 import {
+	ACTIVE_BOARD_ROWS,
 	ACTIVE_BOARD_COL_OFFSET,
 	ACTIVE_BOARD_ROW_OFFSET,
 	VISUAL_BOARD_COLS,
@@ -27,7 +28,7 @@ export const pieceAnimDuration = 0.332;
  */
 export const pieceAnimEasing = Konva.Easings.BackEaseOut;
 
-const BoardPiece = ({ id, square: { piece, location }, squares, onMove, onSelect, onGrab, cellSize, currentPlayer, movementIsLocked }) => {
+const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, onMove, onSelect, onGrab, cellSize, currentPlayer, movementIsLocked }) => {
 	const [lastXY, setLastXY] = useState({ x: undefined, y: undefined });
 	const pieceImageSource = piece.type === PieceTypesEnum.KING
 		? (piece.color === PlayerTypesEnum.BLUE ? BlueBurglarSVG : RedBurglarSVG)
@@ -87,11 +88,12 @@ const BoardPiece = ({ id, square: { piece, location }, squares, onMove, onSelect
 			}}
 			dragBoundFunc={(pos) => {
 				// Limit drag to inside the canvas.
-				const firstSquare = cellSize - (cellSize / 2);
-				const lastColHor = (cellSize * 9) + (cellSize / 2);
-				const lastColVer = (cellSize * 7) + (cellSize / 2);
-				const newX = pos.x > lastColHor ? lastColHor : pos.x < firstSquare ? firstSquare : pos.x;
-				const newY = pos.y > lastColVer ? lastColVer : pos.y < firstSquare ? firstSquare : pos.y;
+				const minX = Location.getX(-ACTIVE_BOARD_COL_OFFSET, cellSize);
+				const maxX = Location.getX(VISUAL_BOARD_COLS - ACTIVE_BOARD_COL_OFFSET - 1, cellSize);
+				const minY = Location.getY(-ACTIVE_BOARD_ROW_OFFSET, cellSize);
+				const maxY = Location.getY(ACTIVE_BOARD_ROWS - ACTIVE_BOARD_ROW_OFFSET - 1, cellSize);
+				const newX = pos.x > maxX ? maxX : pos.x < minX ? minX : pos.x;
+				const newY = pos.y > maxY ? maxY : pos.y < minY ? minY : pos.y;
 				return {
 					x: newX,
 					y: newY
@@ -135,7 +137,7 @@ const BoardPiece = ({ id, square: { piece, location }, squares, onMove, onSelect
 					} else {
 						// We are moving to a neighbor, which is a valid move location.
 						// But, now we check if we are not stepping into another piece being a piece other than a switch (moving to a square where another piece already exists is only valid for a Switch piece)
-						const board = new Board({ squares });
+						const board = new Board({ squares, offboardPieces });
 						const movement = board.checkMovePossibility(srcLocation, destLocation);
 						// console.log("Move possibility", movement);
 

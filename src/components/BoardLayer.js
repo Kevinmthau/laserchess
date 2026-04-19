@@ -71,7 +71,8 @@ const CENTER_DIAMOND_ROW = Math.floor(VISUAL_BOARD_ROWS / 2);
 const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
     const dispatch = useDispatch();
     const squares = useSelector(state => state.game.squares);
-    const flattenedSquares = useSelector(state => flatMap(state.game.squares));
+    const offboardPieces = useSelector(state => state.game.offboardPieces);
+    const flattenedSquares = useSelector(state => [...flatMap(state.game.squares), ...(state.game.offboardPieces || [])]);
     const movementIsLocked = useSelector(state => state.game.movementIsLocked);
     const currentPlayer = useSelector(state => state.game.currentPlayer);
     const selectedPieceLocation = useSelector(state => state.game.selectedPieceLocation);
@@ -514,6 +515,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                 id={square.location.an}
                 key={`${square.piece.imageName}--${square.location.an}`}
                 squares={squares}
+                offboardPieces={offboardPieces}
                 square={square}
                 onMove={onBoardPieceMove}
                 onGrab={(srcLocation) => {
@@ -529,7 +531,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                 cellSize={cellSize}
             />
         ));
-    }, [flattenedSquares, currentPlayer, movementIsLocked, placementModeActive, squares, onBoardPieceMove, cellSize, dispatch, selectedPieceLocation]);
+    }, [flattenedSquares, currentPlayer, movementIsLocked, placementModeActive, squares, offboardPieces, onBoardPieceMove, cellSize, dispatch, selectedPieceLocation]);
 
     const drawPossibleMovesHighlight = useCallback(() => {
         if (placementModeActive) {
@@ -537,7 +539,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
         }
 
         if (!isEmpty(selectedPieceLocation)) {
-            const board = new Board({ squares });
+            const board = new Board({ squares, offboardPieces });
             const movesForSelectedPiece = board.getMovesForPieceAtLocation(selectedPieceLocation);
 
             const ringColor = currentPlayer === PlayerTypesEnum.BLUE ? "#79C6FF" : "#FF9BB5";
@@ -573,14 +575,14 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
 
             return [possibleMovesHighlights, selectedPieceHighlight];
         }
-    }, [cellSize, currentPlayer, dispatch, placementModeActive, reference, selectedPieceLocation, squares]);
+    }, [cellSize, currentPlayer, dispatch, offboardPieces, placementModeActive, reference, selectedPieceLocation, squares]);
 
     const drawDeployHighlights = useCallback(() => {
         if (!pendingPlacement) {
             return null;
         }
 
-        const board = new Board({ squares });
+        const board = new Board({ squares, offboardPieces });
         const deployLocations = board.getDeployLocationsForPlayer(pendingPlacement.playerType, PieceTypesEnum.DEFLECTOR);
         const isBackslashMirror = pendingPlacement.orientation === 0 || pendingPlacement.orientation === 180;
 
@@ -625,7 +627,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                 </Group>
             );
         });
-    }, [cellSize, dispatch, pendingPlacement, squares]);
+    }, [cellSize, dispatch, offboardPieces, pendingPlacement, squares]);
 
     const drawLaser = useCallback(() => {
         const linePoints = Board.linePointsFromLaserRoute(laser.route, cellSize);

@@ -20,7 +20,9 @@ export const SquareTypesEnum = Object.freeze({
     LASER_BLUE: "laser-blue",
     LASER_RED: "laser-red",
     RESERVED_BLUE: "reserved-blue",
-    RESERVED_RED: "reserved-red"
+    RESERVED_RED: "reserved-red",
+    HIDEOUT_BLUE: "hideout-blue",
+    HIDEOUT_RED: "hideout-red"
 });
 
 export const GameStatusEnum = Object.freeze({

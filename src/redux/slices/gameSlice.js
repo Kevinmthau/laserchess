@@ -17,6 +17,7 @@ const gameSlice = createSlice({
         winner: "", // 🎉 this is replaced with either PlayerTypesEnum.BLUE or PlayerTypesEnum.RED when one of them wins by killing the opponent's king!
         winnerReason: null,
         squares: [],
+        offboardPieces: [],
         mirrorReserve: initialMirrorReserve(),
         pendingPlacement: null,
 
@@ -42,6 +43,7 @@ const gameSlice = createSlice({
         setBoardType: (state, action) => {
             const newBoard = new Board(action.payload).serialize();
             state.squares = newBoard.squares;
+            state.offboardPieces = newBoard.offboardPieces;
             state.winner = newBoard.winner || "";
             state.winnerReason = newBoard.winnerReason;
             state.sn = newBoard.sn;
@@ -62,7 +64,7 @@ const gameSlice = createSlice({
 
             // Lock the move until finished (or laser stopped)
             const { movement } = action.payload;
-            const newBoard = new Board({ squares: state.squares });
+            const newBoard = new Board({ squares: state.squares, offboardPieces: state.offboardPieces });
 
             newBoard.applyMovement(movement);
             const serializedBoard = newBoard.serialize();
@@ -71,6 +73,7 @@ const gameSlice = createSlice({
                 state.winnerReason = serializedBoard.winnerReason;
                 state.sn = serializedBoard.sn;
                 state.squares = serializedBoard.squares;
+                state.offboardPieces = serializedBoard.offboardPieces;
                 state.status = GameStatusEnum.GAME_OVER;
                 state.laser.route = [];
                 state.laser.finalActionType = null;
@@ -127,7 +130,7 @@ const gameSlice = createSlice({
 
             const { location } = action.payload;
             const { playerType, pieceType, orientation } = state.pendingPlacement;
-            const newBoard = new Board({ squares: state.squares });
+            const newBoard = new Board({ squares: state.squares, offboardPieces: state.offboardPieces });
             if (!newBoard.canDeployPiece(location, playerType, pieceType)) {
                 return;
             }
@@ -156,7 +159,7 @@ const gameSlice = createSlice({
          * - This action is dispatched before #togglePlayerTurn.
          */
         finishMovement: (state) => {
-            const newBoard = new Board({ squares: state.squares });
+            const newBoard = new Board({ squares: state.squares, offboardPieces: state.offboardPieces });
             if (state.laser.finalLocation) {
                 newBoard.applyLaserHit(state.laser.finalActionType, state.laser.finalLocation);
             } else {
@@ -168,6 +171,7 @@ const gameSlice = createSlice({
             state.winnerReason = serializedBoard.winnerReason;
             state.sn = serializedBoard.sn;
             state.squares = serializedBoard.squares;
+            state.offboardPieces = serializedBoard.offboardPieces;
 
             // Check if game over
             if (serializedBoard.winner) {
@@ -242,6 +246,7 @@ const gameSlice = createSlice({
             state.winner = "";
             state.winnerReason = null;
             state.squares = newBoard.squares;
+            state.offboardPieces = newBoard.offboardPieces;
             state.mirrorReserve = initialMirrorReserve();
             state.pendingPlacement = null;
             state.selectedPieceLocation = null;

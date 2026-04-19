@@ -1,10 +1,10 @@
 import { LaserDirectionsEnum, PlayerTypesEnum, MovementTypesEnum, LaserActionTypesEnum, PieceTypesEnum, LaserEventsEnum, SquareTypesEnum, WinReasonsEnum } from "./Enums";
 import Location from "./Location";
 import Piece, { PieceUtils } from "./Piece";
-import { SquareUtils } from "./Square";
+import Square, { SquareUtils } from "./Square";
 import SN from "../utils/SN";
 import LHAN from "../utils/LHAN";
-import { flatMap, repeat, toLower, toUpper } from "lodash";
+import { cloneDeep, flatMap, repeat, toLower, toUpper } from "lodash";
 import Movement from "./Movement";
 import LaserPath from "./LaserPath";
 import { point, polygon } from "@turf/helpers";
@@ -16,12 +16,40 @@ import { pieceAnimDuration, pieceAnimEasing } from "../components/BoardPiece";
  * @constant
  * Ace
  */
-export const DEFAULT_BOARD_SN = "l++3dkd3/*/*/*/*/*/*/3DKD3L";
+export const DEFAULT_BOARD_SN = "l++9/*/*/*/*/*/*/9L";
 export const MIRROR_RESERVE_COUNT = 3;
 
 export const DIAMOND_GOAL_ANS = Object.freeze(["e5", "f5", "e4", "f4"]);
 const DIAMOND_GOAL_SET = new Set(DIAMOND_GOAL_ANS);
 export const isDiamondGoalLocation = (location) => Boolean(location && DIAMOND_GOAL_SET.has(location.an));
+
+export const RED_HIDEOUT_LOCATION = Object.freeze(new Location(-2, 5).serialize());
+export const BLUE_HIDEOUT_LOCATION = Object.freeze(new Location(12, 3).serialize());
+
+const RED_HIDEOUT_ENTRY = Object.freeze(Location.fromAN("a3").serialize());
+const BLUE_HIDEOUT_ENTRY = Object.freeze(Location.fromAN("j5").serialize());
+
+const locationKey = (location) => `${location.colIndex},${location.rowIndex}`;
+
+const HIDEOUT_CONNECTIONS = Object.freeze({
+    [locationKey(RED_HIDEOUT_LOCATION)]: [locationKey(RED_HIDEOUT_ENTRY)],
+    [locationKey(RED_HIDEOUT_ENTRY)]: [locationKey(RED_HIDEOUT_LOCATION)],
+    [locationKey(BLUE_HIDEOUT_LOCATION)]: [locationKey(BLUE_HIDEOUT_ENTRY)],
+    [locationKey(BLUE_HIDEOUT_ENTRY)]: [locationKey(BLUE_HIDEOUT_LOCATION)]
+});
+
+const createDefaultOffboardPieces = () => ([
+    new Square(
+        SquareTypesEnum.HIDEOUT_RED,
+        new Piece("k", 0).serialize(),
+        cloneDeep(RED_HIDEOUT_LOCATION)
+    ).serialize(),
+    new Square(
+        SquareTypesEnum.HIDEOUT_BLUE,
+        new Piece("K", 0).serialize(),
+        cloneDeep(BLUE_HIDEOUT_LOCATION)
+    ).serialize()
+]);
 
 /**
  * @constant
@@ -65,6 +93,13 @@ class Board {
             // If opts.squares nor opts.setupNotation is provided, use the default (ace) setup notation
             this.squares = SN.parse(DEFAULT_BOARD_SN);
         }
+        if (options.offboardPieces) {
+            this.offboardPieces = options.offboardPieces;
+        } else if (!options.squares && (!options.setupNotation || options.setupNotation === DEFAULT_BOARD_SN)) {
+            this.offboardPieces = createDefaultOffboardPieces();
+        } else {
+            this.offboardPieces = [];
+        }
         this.winner = null;
         this.winnerReason = null;
     }
@@ -78,6 +113,11 @@ class Board {
      * @returns {Square} the square or null if no square was found on the specified location.
      */
     getSquare(location) {
+        const offboardSquare = this.offboardPieces.find(square => locationKey(square.location) === locationKey(location));
+        if (offboardSquare) {
+            return offboardSquare;
+        }
+
         let row = this.squares[location.rowIndex];
         if (row) {
             let squareAtLocation = row[location.colIndex];
@@ -94,9 +134,7 @@ class Board {
      * @returns {Array}
      */
     getPlayerSquares(player) {
-        // flatten all rows into a single array
-        // console.log(board);
-        const flattenedSquares = flatMap(this.squares);
+        const flattenedSquares = [...flatMap(this.squares), ...this.offboardPieces];
         return flattenedSquares.filter((square) => {
             // Filter out the squares with no pieces in it.
             // And only return the pieces of the specified color
@@ -267,42 +305,7 @@ class Board {
     getMovesForPieceAtLocation(location) {
         const moves = [];
 
-        const srcX = location.colIndex;
-        const srcY = location.rowIndex;
-        /**
-         * Every piece, except for Laser, has a maximum of 10 possible moves (to it's neighbor squares and rotating) on it's turn: 
-         * - TOP_LEFT, TOP, TOP_RIGHT, RIGHT, BOTTOM_RIGHT, BOTTOM, BOTTOM_LEFT, LEFT, ROTATION_CLOCKWISE, ROTATION_C_CLOCKWISE
-         * The Laser pieces are immovable throughout the entire game.
-         * 
-         * -------------
-         * |TL| |T| |TR|
-         * -------------
-         * |L|  |x|  |R|
-         * -------------
-         * |BL| |B| |BR|
-         * -------------
-         * Where X is our srcLocation (where the piece we are moving is originally located).
-         */
-        const possibilities = [
-            [srcX - 1, srcY - 1], // TL
-            [srcX + 0, srcY - 1], // T
-            [srcX + 1, srcY - 1], // TR
-            [srcX + 1, srcY + 0], // R
-            [srcX + 1, srcY + 1], // BR
-            [srcX + 0, srcY + 1], // B
-            [srcX - 1, srcY + 1], // BL
-            [srcX - 1, srcY + 0], // L
-        ];
-
-        possibilities.forEach(([dx, dy]) => {
-            // Make sure that dx and dy are inside the bounds of the board
-            const dxIsInsideTheBoard = (dx >= 0 && dx < 10); // 10 is the maximum number of cols (actually it's 9 in array because of 0-based-index, hence why we are using less-than sign)
-            const dyIsInsideTheBoard = (dy >= 0 && dy < 8); // 8 is the maximum number of rows (actually it's 7 in array because of 0-based-index, hence why we are using less-than sign)
-            if (!(dxIsInsideTheBoard && dyIsInsideTheBoard)) {
-                return; // skip to next itteration, because this dx or dy is outside the bound of the board.
-            }
-
-            const possibleDestLocation = new Location(dx, dy);
+        this.getAdjacentLocations(location).forEach((possibleDestLocation) => {
             const movePossibility = this.checkMovePossibility(location, possibleDestLocation);
 
             if (movePossibility.type !== MovementTypesEnum.INVALID) {
@@ -313,6 +316,31 @@ class Board {
 
         // TODO: add rotation possibility as well
         return moves;
+    }
+
+    getAdjacentLocations(location) {
+        const srcX = location.colIndex;
+        const srcY = location.rowIndex;
+        const possibilities = [
+            [srcX - 1, srcY - 1],
+            [srcX + 0, srcY - 1],
+            [srcX + 1, srcY - 1],
+            [srcX + 1, srcY + 0],
+            [srcX + 1, srcY + 1],
+            [srcX + 0, srcY + 1],
+            [srcX - 1, srcY + 1],
+            [srcX - 1, srcY + 0],
+        ]
+            .filter(([dx, dy]) => dx >= 0 && dx < 10 && dy >= 0 && dy < 8)
+            .map(([dx, dy]) => new Location(dx, dy));
+
+        const hideoutConnections = HIDEOUT_CONNECTIONS[locationKey(location)] || [];
+        hideoutConnections.forEach((key) => {
+            const [colIndex, rowIndex] = key.split(",").map(Number);
+            possibilities.push(new Location(colIndex, rowIndex));
+        });
+
+        return possibilities;
     }
 
     /**
@@ -384,7 +412,7 @@ class Board {
         const squareAtSrc = this.getSquare(movement.srcLocation);
         if (movement.type === MovementTypesEnum.NORMAL) { // dislocate
             // Normal movement (from one square to an empty one)
-            const squareAtDest = this.squares[movement.destLocation.rowIndex][movement.destLocation.colIndex];
+            const squareAtDest = this.getSquare(movement.destLocation);
             // Move the piece from the src to dest.
             squareAtDest.piece = squareAtSrc.piece;
             squareAtSrc.piece = null;
@@ -468,7 +496,10 @@ class Board {
      * @param {PlayerTypesEnum} playerType the player that is moving
      */
     newBoardFromMovement(movement, playerType) {
-        const newBoard = new Board({ setupNotation: this.toSN() }); // clone this board
+        const newBoard = new Board({
+            squares: cloneDeep(this.squares),
+            offboardPieces: cloneDeep(this.offboardPieces)
+        });
         newBoard.applyMovement(movement);
         if (!newBoard.winner) {
             newBoard.applyLaser(playerType);
@@ -535,6 +566,7 @@ class Board {
             winner: this.winner,
             winnerReason: this.winnerReason,
             squares: this.squares,
+            offboardPieces: this.offboardPieces,
             sn: this.toSN() // setup notation
         };
     }
@@ -561,6 +593,14 @@ class Board {
 
         if (square.type === SquareTypesEnum.RESERVED_RED && playerType !== PlayerTypesEnum.RED) {
             return false;
+        }
+
+        if (square.type === SquareTypesEnum.HIDEOUT_RED) {
+            return playerType === PlayerTypesEnum.RED && pieceType === PieceTypesEnum.KING;
+        }
+
+        if (square.type === SquareTypesEnum.HIDEOUT_BLUE) {
+            return playerType === PlayerTypesEnum.BLUE && pieceType === PieceTypesEnum.KING;
         }
 
         if (isDiamondGoalLocation(square.location) && pieceType !== PieceTypesEnum.KING) {
@@ -655,6 +695,10 @@ class Board {
      * @returns {boolean} true if the destLocation square is a neighboring square, otherwise false for every other square.
      */
     static isMovingToNeighborSquare(srcLocation, destLocation) {
+        if ((HIDEOUT_CONNECTIONS[locationKey(srcLocation)] || []).includes(locationKey(destLocation))) {
+            return true;
+        }
+
         /**
          * Minimum squares to be moved to, given xy as srcLocation
          * 

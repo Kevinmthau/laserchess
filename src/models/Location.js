@@ -15,7 +15,9 @@ class Location {
     constructor(colIndex, rowIndex) {
         this.colIndex = colIndex; // 0-indexed column (x) for internal use.
         this.rowIndex = rowIndex; // 0-indexed row (y) for internal use.
-        this.col = COLS_IN_NOTATION.charAt(colIndex); // the column in Algebraic Notation
+        this.col = colIndex >= 0 && colIndex < COLS_IN_NOTATION.length
+            ? COLS_IN_NOTATION.charAt(colIndex)
+            : null; // the column in Algebraic Notation
         this.row = 8 - rowIndex; // the row in Algebraic Notation
     }
 
@@ -88,6 +90,10 @@ class Location {
      * @returns {string} the location in AN format. E.g: location -> a8, location -> b3
      */
     get an() {
+        if (this.col === null) {
+            const colToken = this.colIndex < 0 ? `n${Math.abs(this.colIndex)}` : `${this.colIndex}`;
+            return `off_${colToken}_${this.rowIndex}`;
+        }
         return `${this.col}${this.row}`;
     }
 
