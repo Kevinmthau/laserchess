@@ -30,6 +30,7 @@ export const pieceAnimEasing = Konva.Easings.BackEaseOut;
 
 const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, onMove, onSelect, onGrab, cellSize, currentPlayer, movementIsLocked }) => {
 	const [lastXY, setLastXY] = useState({ x: undefined, y: undefined });
+	const isDraggablePiece = piece.type !== PieceTypesEnum.LASER;
 	const pieceImageSource = piece.type === PieceTypesEnum.KING
 		? (piece.color === PlayerTypesEnum.BLUE ? BlueBurglarSVG : RedBurglarSVG)
 		: `https://laserchess.s3.us-east-2.amazonaws.com/pieces/${piece.imageName}.svg`;
@@ -73,15 +74,24 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 		}
 	}, [location, onSelect, piece.type]);
 
+	const resetToPosition = useCallback((node, x, y) => {
+		node.to({
+			x,
+			y,
+			duration: pieceAnimDuration,
+			easing: pieceAnimEasing
+		});
+	}, []);
+
 
 	return (
-		<Group draggable={piece.type !== PieceTypesEnum.LASER}
+		<Group draggable={isDraggablePiece}
 			id={id}
 			onTap={selectThePiece}
 			onClick={selectThePiece}
 			onMouseEnter={(e) => {
 				const container = e.target.getStage().container();
-				container.style.cursor = "grab";
+				container.style.cursor = isDraggablePiece ? "grab" : "pointer";
 			}}
 			onMouseLeave={(e) => {
 				const container = e.target.getStage().container();
@@ -108,99 +118,105 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 				container.style.cursor = "grabbing";
 			}}
 			onDragEnd={(e) => {
-				// Handle piece drag and dropping by snapping it to the grid.
-				const rawEndX = e.target.x(); // the final X position
-				const rawEndY = e.target.y(); // the final Y position
-				// Calculate the X and Y used to draw the piece in the board. Having in consideration the margin and the piece offset.
-				const endX = (Math.round((rawEndX + (cellSize / 2)) / cellSize) * cellSize) - (cellSize / 2);
-				const endY = (Math.round((rawEndY + (cellSize / 2)) / cellSize) * cellSize) - (cellSize / 2);
-
-				const hasChangedLocation = !isEqual(lastXY, { x: endX, y: endY });
-				if (hasChangedLocation) {
-					const srcLocation = Location.fromXY(lastXY.x, lastXY.y, cellSize);
-					const destLocation = Location.fromXY(endX, endY, cellSize);
-
-					// Validate!
-					// Check if the destLocation square is a neighbor of the srcLocation.
-					const isMovingToNeighbor = Board.isMovingToNeighborSquare(srcLocation, destLocation);
-					if (!isMovingToNeighbor) {
-						// Not a neighbor square of the srcLocation, so move is invalid by itself.
-						// See game rules about piece movement https://github.com/kishannareshpal/docs/Guide.md
-
-						// Reset the piece to where it was before moving.
-						e.target.to({
-							x: lastXY.x,
-							y: lastXY.y,
-							duration: pieceAnimDuration,
-							easing: pieceAnimEasing
-						});
-
-					} else {
-						// We are moving to a neighbor, which is a valid move location.
-						// But, now we check if we are not stepping into another piece being a piece other than a switch (moving to a square where another piece already exists is only valid for a Switch piece)
-						const board = new Board({ squares, offboardPieces });
-						const movement = board.checkMovePossibility(srcLocation, destLocation);
-						// console.log("Move possibility", movement);
-
-						if (!movement.isPossible) {
-							// Oh-no, the movement is not possible!
-							// The dest location already contains a piece on it and the srcPiece is not a Shield.
-							// Or the destLocation is not a neighboring square.
-							// Reset the piece to where it was before drag (to it's original location - src).
-							e.target.to({
-								x: lastXY.x,
-								y: lastXY.y,
-								duration: pieceAnimDuration,
-								easing: pieceAnimEasing
-							});
-
-						} else {
-							onSelect(null); // Unselect the piece if moved to a different piece
-							// Perfect! The movement is possible
-							// Check the type of movement, which could be either "special" or "normal"
-							if (movement.type === MovementTypesEnum.SPECIAL) {
-								// Special move (Switch can swap)
-								// Swap the piece from destLocation with the current piece!
-								e.target.to({
-									x: endX,
-									y: endY,
-									duration: pieceAnimDuration,
-									easing: pieceAnimEasing
-								});
-
-								// Replaces the srcPiece with the destPiece and vice versa.
-								// Pass the lastXY so we can animate the move of the destPiece to the srcLocation (the switch)!
-								onMove(movement, lastXY); // the other piece is moved to the srcLocation on the App.js
-
-							} else if (movement.type === MovementTypesEnum.NORMAL) {
-								// Normal move (moving to a new empty target square)
-								e.target.to({
-									x: endX,
-									y: endY,
-									duration: pieceAnimDuration,
-									easing: pieceAnimEasing
-								});
-
-								onMove(movement, null);
-
-							}
-
-							// Update the last position to be this new one
-							setLastXY({
-								x: endX,
-								y: endY
-							});
-						}
+				const fallbackXY = renderedPosition();
+				try {
+					const startX = Number.isFinite(lastXY.x) ? lastXY.x : fallbackXY.x;
+					const startY = Number.isFinite(lastXY.y) ? lastXY.y : fallbackXY.y;
+					// Handle piece drag and dropping by snapping it to the grid.
+					const rawEndX = e.target.x(); // the final X position
+					const rawEndY = e.target.y(); // the final Y position
+					if (
+						!Number.isFinite(rawEndX) ||
+						!Number.isFinite(rawEndY) ||
+						!Number.isFinite(startX) ||
+						!Number.isFinite(startY)
+					) {
+						resetToPosition(e.target, fallbackXY.x, fallbackXY.y);
+						const container = e.target.getStage().container();
+						container.style.cursor = "grab";
+						return;
 					}
 
-				} else {
-					// No movement made at all. Just align back to where it was before drag.
-					e.target.to({
-						x: endX,
-						y: endY,
-						duration: pieceAnimDuration,
-						easing: pieceAnimEasing
-					});
+					// Calculate the X and Y used to draw the piece in the board. Having in consideration the margin and the piece offset.
+					const endX = (Math.round((rawEndX + (cellSize / 2)) / cellSize) * cellSize) - (cellSize / 2);
+					const endY = (Math.round((rawEndY + (cellSize / 2)) / cellSize) * cellSize) - (cellSize / 2);
+
+					const originXY = { x: startX, y: startY };
+					const hasChangedLocation = !isEqual(originXY, { x: endX, y: endY });
+					if (hasChangedLocation) {
+						const srcLocation = Location.fromXY(startX, startY, cellSize);
+						const destLocation = Location.fromXY(endX, endY, cellSize);
+
+						// Validate!
+						// Check if the destLocation square is a neighbor of the srcLocation.
+						const isMovingToNeighbor = Board.isMovingToNeighborSquare(srcLocation, destLocation);
+						if (!isMovingToNeighbor) {
+							// Not a neighbor square of the srcLocation, so move is invalid by itself.
+							// See game rules about piece movement https://github.com/kishannareshpal/docs/Guide.md
+
+							// Reset the piece to where it was before moving.
+							resetToPosition(e.target, startX, startY);
+
+						} else {
+							// We are moving to a neighbor, which is a valid move location.
+							// But, now we check if we are not stepping into another piece being a piece other than a switch (moving to a square where another piece already exists is only valid for a Switch piece)
+							const board = new Board({ squares, offboardPieces });
+							const movement = board.checkMovePossibility(srcLocation, destLocation);
+							// console.log("Move possibility", movement);
+
+							if (!movement.isPossible) {
+								// Oh-no, the movement is not possible!
+								// The dest location already contains a piece on it and the srcPiece is not a Shield.
+								// Or the destLocation is not a neighboring square.
+								// Reset the piece to where it was before drag (to it's original location - src).
+								resetToPosition(e.target, startX, startY);
+
+							} else {
+								onSelect(null); // Unselect the piece if moved to a different piece
+								// Perfect! The movement is possible
+								// Check the type of movement, which could be either "special" or "normal"
+								if (movement.type === MovementTypesEnum.SPECIAL) {
+									// Special move (Switch can swap)
+									// Swap the piece from destLocation with the current piece!
+									e.target.to({
+										x: endX,
+										y: endY,
+										duration: pieceAnimDuration,
+										easing: pieceAnimEasing
+									});
+
+									// Replaces the srcPiece with the destPiece and vice versa.
+									// Pass the lastXY so we can animate the move of the destPiece to the srcLocation (the switch)!
+									onMove(movement, originXY); // the other piece is moved to the srcLocation on the App.js
+
+								} else if (movement.type === MovementTypesEnum.NORMAL) {
+									// Normal move (moving to a new empty target square)
+									e.target.to({
+										x: endX,
+										y: endY,
+										duration: pieceAnimDuration,
+										easing: pieceAnimEasing
+									});
+
+									onMove(movement, null);
+
+								}
+
+								// Update the last position to be this new one
+								setLastXY({
+									x: endX,
+									y: endY
+								});
+							}
+						}
+
+					} else {
+						// No movement made at all. Just align back to where it was before drag.
+						resetToPosition(e.target, endX, endY);
+					}
+				} catch (error) {
+					resetToPosition(e.target, fallbackXY.x, fallbackXY.y);
+					console.error("BoardPiece drag interaction failed", error);
 				}
 
 				const container = e.target.getStage().container();

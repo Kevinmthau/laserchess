@@ -202,6 +202,14 @@ describe("mirror deployment rules", () => {
         expect(board.canDeployPiece(new Location(12, 2).serialize(), PlayerTypesEnum.BLUE)).toBe(false);
     });
 
+    it("allows reflector movement into open spaces", () => {
+        const board = new Board({ setupNotation: "*/2B7/*/*/*/*/*/*" });
+
+        expect(
+            board.checkMovePossibility(Location.fromAN("c7"), Location.fromAN("c6")).type
+        ).toBe(MovementTypesEnum.NORMAL);
+    });
+
     it("blocks reflector movement onto room object squares", () => {
         const board = new Board({ setupNotation: "*/2B7/*/*/*/*/*/*" });
 

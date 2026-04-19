@@ -156,13 +156,15 @@ function App() {
 											cellSize={cellSize}
 											onBoardPieceMove={(movement, srcPieceXY) => {
 												if (movement.type === MovementTypesEnum.SPECIAL) {
-													const [destBoardPiece] = stagePiecesRef.current.find(`#${movement.destLocation.an}`);
-													destBoardPiece.to({
-														x: srcPieceXY.x,
-														y: srcPieceXY.y,
-														duration: pieceAnimDuration,
-														easing: pieceAnimEasing
-													});
+													const destBoardPiece = stagePiecesRef.current?.findOne(`#${movement.destLocation.an}`);
+													if (destBoardPiece && srcPieceXY) {
+														destBoardPiece.to({
+															x: srcPieceXY.x,
+															y: srcPieceXY.y,
+															duration: pieceAnimDuration,
+															easing: pieceAnimEasing
+														});
+													}
 												}
 
 												const delayed = !(movement.type === MovementTypesEnum.ROTATION_CLOCKWISE || movement.type === MovementTypesEnum.ROTATION_C_CLOCKWISE);

@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import { Circle, Group, Layer, Line, Rect, RegularPolygon } from "react-konva";
 import { LaserActionTypesEnum, LaserDirectionsEnum, PieceTypesEnum, PlayerTypesEnum, SquareTypesEnum } from "../models/Enums";
 import Location from "../models/Location";
@@ -70,6 +70,28 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
     const activeBoardOriginY = ACTIVE_BOARD_ROW_OFFSET * cellSize;
     const blueCornerColIndex = VISUAL_BOARD_COLS - 1;
     const blueCornerRowIndex = VISUAL_BOARD_ROWS - 1;
+
+    useEffect(() => {
+        if (laser.finalActionType !== LaserActionTypesEnum.KILL || !laser.finalLocation || !reference.current) {
+            return undefined;
+        }
+
+        const timerId = setTimeout(() => {
+            const pieceAtFinalLocation = reference.current.findOne(`#${laser.finalLocation.an}`);
+            if (!pieceAtFinalLocation) {
+                return;
+            }
+
+            pieceAtFinalLocation.to({
+                scaleY: 0,
+                scaleX: 0,
+                duration: pieceAnimDuration,
+                easing: pieceAnimEasing
+            });
+        }, 1000);
+
+        return () => clearTimeout(timerId);
+    }, [laser.finalActionType, laser.finalLocation, reference]);
 
     const drawBoardBackdrop = useCallback(() => {
         const kings = flattenedSquares
@@ -700,20 +722,10 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                     cornerRadius={cellSize * 0.12}
                 />
             );
-
-            setTimeout(() => {
-                const pieceAtfinalLocation = reference.current.find(`#${laser.finalLocation.an}`);
-                pieceAtfinalLocation.to({
-                    scaleY: 0,
-                    scaleX: 0,
-                    duration: pieceAnimDuration,
-                    easing: pieceAnimEasing
-                });
-            }, 1000);
         }
 
         return laserGraphics;
-    }, [cellSize, currentPlayer, laser, reference]);
+    }, [cellSize, currentPlayer, laser]);
 
     return (
         <>

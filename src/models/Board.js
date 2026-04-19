@@ -60,6 +60,9 @@ const ROOM_OBJECT_BLOCKED_PIECE_TYPES = new Set([
     PieceTypesEnum.DEFLECTOR,
     PieceTypesEnum.KING
 ]);
+const NON_TRANSLATING_PIECE_TYPES = new Set([
+    PieceTypesEnum.LASER
+]);
 const BLOCKED_VISUAL_KEYS = new Set([
     locationKey(RED_LASER_LOCATION),
     locationKey(BLUE_LASER_LOCATION),
@@ -475,6 +478,10 @@ class Board {
         const pieceTypeAtDest = squareAtDest.piece ? squareAtDest.piece.type : null;
         const pieceColorAtSrc = squareAtSrc.piece.color;
 
+        if (NON_TRANSLATING_PIECE_TYPES.has(pieceTypeAtSrc)) {
+            return new Movement(MovementTypesEnum.INVALID, srcLocation, destLocation);
+        }
+
         if (!this.canPlayerOccupySquare(squareAtDest, pieceColorAtSrc, pieceTypeAtSrc)) {
             return new Movement(MovementTypesEnum.INVALID, srcLocation, destLocation);
         }
@@ -517,6 +524,10 @@ class Board {
 
         const squareAtSrc = this.getSquare(movement.srcLocation);
         if (movement.type === MovementTypesEnum.NORMAL) { // dislocate
+            if (!SquareUtils.hasPiece(squareAtSrc) || NON_TRANSLATING_PIECE_TYPES.has(squareAtSrc.piece.type)) {
+                return;
+            }
+
             // Normal movement (from one square to an empty one)
             const squareAtDest = this.getSquare(movement.destLocation);
             // Move the piece from the src to dest.
@@ -930,11 +941,17 @@ class Board {
      * @param {number} cellSize The width of individual squares of the board
      */
     static presentPieceMovement(stagePiecesRef, movement, cellSize) {
-        const [srcBoardPiece] = stagePiecesRef.current.find(`#${movement.srcLocation.an}`);
+        const srcBoardPiece = stagePiecesRef.current?.findOne(`#${movement.srcLocation.an}`);
+        if (!srcBoardPiece) {
+            return;
+        }
 
         // Check the type of movement, which could be either "special" or "normal"
         if (movement.type === MovementTypesEnum.SPECIAL) {
-            const [destBoardPiece] = stagePiecesRef.current.find(`#${movement.destLocation.an}`);
+            const destBoardPiece = stagePiecesRef.current?.findOne(`#${movement.destLocation.an}`);
+            if (!destBoardPiece) {
+                return;
+            }
             // Special move (Switch can swap)
             // Swap the piece from destLocation with the piece at srcLocation!
             // - First move the piece from src to dest
