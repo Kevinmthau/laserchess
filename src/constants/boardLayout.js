@@ -13,8 +13,10 @@ export const VISUAL_BOARD_ASPECT = VISUAL_BOARD_COLS / VISUAL_BOARD_ROWS;
 export const BOOKSHELF_PROPS = Object.freeze([
     { col: 2, row: 1, width: 0.72, height: 0.72 },
     { col: 12, row: 1, width: 0.72, height: 0.72 },
-    { col: 13, row: 3, width: 0.72, height: 0.72 },
-    { col: 1, row: 5, width: 0.72, height: 0.72 },
+    { col: 14, row: 2, width: 0.72, height: 0.72 },
+    { col: 14, row: 4, width: 0.72, height: 0.72 },
+    { col: 0, row: 4, width: 0.72, height: 0.72 },
+    { col: 0, row: 6, width: 0.72, height: 0.72 },
     { col: 2, row: 7, width: 0.72, height: 0.72 },
     { col: 12, row: 7, width: 0.72, height: 0.72 }
 ]);

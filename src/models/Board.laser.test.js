@@ -115,9 +115,11 @@ describe("mirror deployment rules", () => {
         expect(board.canDeployPiece(Location.fromAN("e4").serialize(), PlayerTypesEnum.BLUE)).toBe(true);
         expect(board.canDeployPiece(new Location(-1, 0).serialize(), PlayerTypesEnum.BLUE)).toBe(true);
         expect(board.canDeployPiece(new Location(10, 8).serialize(), PlayerTypesEnum.RED)).toBe(true);
+        expect(board.canDeployPiece(new Location(-1, 5).serialize(), PlayerTypesEnum.BLUE)).toBe(true);
         expect(board.canDeployPiece(Location.fromAN("a7").serialize(), PlayerTypesEnum.BLUE)).toBe(false);
         expect(board.canDeployPiece(Location.fromAN("d7").serialize(), PlayerTypesEnum.BLUE)).toBe(false);
-        expect(board.canDeployPiece(new Location(-1, 5).serialize(), PlayerTypesEnum.BLUE)).toBe(false);
+        expect(board.canDeployPiece(new Location(-2, 4).serialize(), PlayerTypesEnum.BLUE)).toBe(false);
+        expect(board.canDeployPiece(new Location(12, 2).serialize(), PlayerTypesEnum.BLUE)).toBe(false);
     });
 
     it("blocks reflector movement onto room object squares", () => {
@@ -144,7 +146,7 @@ describe("mirror deployment rules", () => {
         ).toBe(MovementTypesEnum.INVALID);
     });
 
-    it("highlights all legal adjacent squares around a burglar in the hideout", () => {
+    it("opens the front hideout exit while bookshelves flank the burglar", () => {
         const board = new Board();
         const destinations = board.getMovesForPieceAtLocation(BLUE_HIDEOUT_LOCATION)
             .map(({ destLocation }) => `${destLocation.colIndex},${destLocation.rowIndex}`)
@@ -152,9 +154,8 @@ describe("mirror deployment rules", () => {
 
         expect(destinations).toEqual([
             "11,2",
+            "11,3",
             "11,4",
-            "12,2",
-            "12,4"
         ]);
     });
 
