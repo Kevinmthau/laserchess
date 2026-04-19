@@ -8,6 +8,12 @@ import { Image } from "react-konva";
 import Board from "../models/Board";
 import BlueBurglarSVG from "../assets/pieces/blue-burglar.svg";
 import RedBurglarSVG from "../assets/pieces/red-burglar.svg";
+import {
+	ACTIVE_BOARD_COL_OFFSET,
+	ACTIVE_BOARD_ROW_OFFSET,
+	VISUAL_BOARD_COLS,
+	VISUAL_BOARD_ROWS
+} from "../constants/boardLayout";
 
 /**
  * @constant
@@ -29,15 +35,31 @@ const BoardPiece = ({ id, square: { piece, location }, squares, onMove, onSelect
 	const [pieceImage] = useImage(pieceImageSource);
 	const pieceGlowColor = piece.color === PlayerTypesEnum.BLUE ? "#6FE7FF" : "#FF7A99";
 	const pieceGlowBlur = piece.type === PieceTypesEnum.KING ? 22 : 10;
+	const renderedPosition = useCallback(() => {
+		if (piece.type === PieceTypesEnum.LASER) {
+			if (piece.color === PlayerTypesEnum.RED) {
+				return {
+					x: Location.getX(-ACTIVE_BOARD_COL_OFFSET, cellSize),
+					y: Location.getY(-ACTIVE_BOARD_ROW_OFFSET, cellSize)
+				};
+			}
 
+			return {
+				x: Location.getX(VISUAL_BOARD_COLS - ACTIVE_BOARD_COL_OFFSET - 1, cellSize),
+				y: Location.getY(VISUAL_BOARD_ROWS - ACTIVE_BOARD_ROW_OFFSET - 1, cellSize)
+			};
+		}
 
-	useEffect(() => {
-		const xy = {
+		return {
 			x: Location.getX(location.colIndex, cellSize),
 			y: Location.getY(location.rowIndex, cellSize)
 		};
-		setLastXY(xy);
-	}, [location, cellSize]);
+	}, [cellSize, location.colIndex, location.rowIndex, piece.color, piece.type]);
+
+
+	useEffect(() => {
+		setLastXY(renderedPosition());
+	}, [renderedPosition]);
 
 
 	// Methods
@@ -192,8 +214,8 @@ const BoardPiece = ({ id, square: { piece, location }, squares, onMove, onSelect
 			shadowBlur={pieceGlowBlur}
 			shadowOpacity={0.65}
 			listening={(piece.color === currentPlayer) && (!movementIsLocked)}
-			x={Location.getX(location.colIndex, cellSize)}
-			y={Location.getY(location.rowIndex, cellSize)}
+			x={renderedPosition().x}
+			y={renderedPosition().y}
 			width={cellSize}
 			height={cellSize}
 		/>

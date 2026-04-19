@@ -10,12 +10,8 @@ import Board from "./models/Board";
 import { IconButton } from "@material-ui/core";
 import RotateLeftIcon from "@material-ui/icons/RotateLeft";
 import RotateRightIcon from "@material-ui/icons/RotateRight";
-import AccessTimeIcon from "@material-ui/icons/AccessTime";
 import Movement from "./models/Movement";
-
-const BOARD_COLS = 10;
-const BOARD_ROWS = 8;
-const BOARD_ASPECT = BOARD_COLS / BOARD_ROWS;
+import { VISUAL_BOARD_ASPECT, VISUAL_BOARD_COLS } from "./constants/boardLayout";
 
 function App() {
 	const [boardWidth, setBoardWidth] = useState(700);
@@ -32,14 +28,14 @@ function App() {
 	const stageContainerRef = useRef();
 	const dispatch = useDispatch();
 
-	const getCellSize = useCallback(() => boardWidth / BOARD_COLS, [boardWidth]);
+	const getCellSize = useCallback(() => boardWidth / VISUAL_BOARD_COLS, [boardWidth]);
 
 	const refreshBoardSize = () => {
 		const horizontalPadding = 32;
 		const verticalPadding = 32;
 		const availableWidth = Math.max(320, window.innerWidth - horizontalPadding);
 		const availableHeight = Math.max(240, window.innerHeight - verticalPadding);
-		const widthFromHeight = availableHeight * BOARD_ASPECT;
+		const widthFromHeight = availableHeight * VISUAL_BOARD_ASPECT;
 		setBoardWidth(Math.min(availableWidth, widthFromHeight));
 	};
 
@@ -82,14 +78,9 @@ function App() {
 		}
 	}, [dispatch, getCellSize, pendingPlacement, selectedPieceLocation]);
 
-	const teamName = currentPlayer === PlayerTypesEnum.BLUE ? "Blue Team" : "Red Team";
-	const teamAccent = currentPlayer === PlayerTypesEnum.BLUE ? "is-blue" : "is-red";
 	const isPlacementActive = Boolean(pendingPlacement);
 	const reserveCount = mirrorReserve[currentPlayer];
 	const canRotate = isPlacementActive || Boolean(selectedPieceLocation);
-	const roundsLeft = 15;
-	const movesLeft = 3;
-	const moveTimerSeconds = 30;
 
 	const winnerLabel = winner ? winner.toUpperCase() : "";
 	const winnerHeadline = winnerReason === WinReasonsEnum.DIAMOND
@@ -99,7 +90,7 @@ function App() {
 		? "The heist is over before the laser could answer."
 		: "One burglar got caught in the beam.";
 
-	const boardHeight = boardWidth / BOARD_ASPECT;
+	const boardHeight = boardWidth / VISUAL_BOARD_ASPECT;
 
 	return (
 		<div className="heist-stage">
@@ -122,15 +113,11 @@ function App() {
 				className="board-shell"
 				style={{ width: boardWidth, height: boardHeight }}
 			>
-				<div className="round-counter">
-					<strong>{roundsLeft}</strong>
-					<span>Rounds Left</span>
-				</div>
-
 				<div className="board" ref={stageContainerRef}>
 					<ReactReduxContext.Consumer>
 						{({ store }) => (
 							<Stage
+								key={`stage-${boardWidth}-${boardHeight}`}
 								id="stage"
 								className="stage"
 								width={boardWidth}
@@ -173,19 +160,6 @@ function App() {
 				<button type="button" className="nav-arrow right" aria-label="next">
 					<span>&rarr;</span>
 				</button>
-
-				<div className={`team-banner ${teamAccent}`}>
-					<div className="team-banner-main">
-						<h4>{teamName}</h4>
-						<div className="team-banner-subline">
-							<span>{movesLeft} Moves Left</span>
-							<span className="timer-pill">
-								<AccessTimeIcon />
-								{moveTimerSeconds}
-							</span>
-						</div>
-					</div>
-				</div>
 
 				<div className="control-dock">
 					<div className="control-dock-label">Actions</div>
