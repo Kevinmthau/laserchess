@@ -349,6 +349,13 @@ class Board {
                 const nextScanningSquareLocation = new Location(colIndex, rowIndex);
                 const nextScanningSquare = this.getSquare(nextScanningSquareLocation);
 
+                if (isRoomObjectLocation(nextScanningSquareLocation)) {
+                    eventType = LaserEventsEnum.END;
+                    actionType = LaserActionTypesEnum.NOTHING;
+                    completeRoute.push(new LaserPath(eventType, direction, actionType, nextScanningSquareLocation.serialize()).serialize());
+                    continue;
+                }
+
                 // Check if it has a piece in this square
                 if (SquareUtils.hasPiece(nextScanningSquare)) {
                     // If piece was found, check what we have to do, based on the Laser Hit Action Notation of the piece in the scanning square

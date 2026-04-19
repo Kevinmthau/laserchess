@@ -81,6 +81,28 @@ describe("laser blocker resolution", () => {
 
         expect(finishedState.squares[6][8].piece).not.toBeNull();
     });
+
+    it("stops the laser on an active-board room object", () => {
+        const board = new Board({ setupNotation: "l+9/*/*/*/*/*/*/9L+++" });
+        board.deployPiece(Location.fromAN("d8").serialize(), PieceTypesEnum.DEFLECTOR, PlayerTypesEnum.RED, 0);
+
+        const route = board.getLaserRoute(PlayerTypesEnum.RED);
+        const finalLaserPath = route[route.length - 1];
+
+        expect(finalLaserPath.location).toEqual(new Location(3, 1).serialize());
+        expect(finalLaserPath.actionType).toBe(LaserActionTypesEnum.NOTHING);
+    });
+
+    it("stops the laser on an outer-ring room object", () => {
+        const board = new Board({ setupNotation: "l+9/*/*/*/*/*/*/9L+++" });
+        board.deployPiece(new Location(10, 0).serialize(), PieceTypesEnum.DEFLECTOR, PlayerTypesEnum.RED, 0);
+
+        const route = board.getLaserRoute(PlayerTypesEnum.RED);
+        const finalLaserPath = route[route.length - 1];
+
+        expect(finalLaserPath.location).toEqual(new Location(10, 1).serialize());
+        expect(finalLaserPath.actionType).toBe(LaserActionTypesEnum.NOTHING);
+    });
 });
 
 describe("mirror deployment rules", () => {
