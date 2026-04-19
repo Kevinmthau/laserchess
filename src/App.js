@@ -13,6 +13,13 @@ import RotateRightIcon from "@material-ui/icons/RotateRight";
 import Movement from "./models/Movement";
 import { VISUAL_BOARD_ASPECT, VISUAL_BOARD_COLS } from "./constants/boardLayout";
 
+const STACKED_CONTROLS_BREAKPOINT = 980;
+const LAYOUT_PADDING = 32;
+const SIDE_DOCK_WIDTH = 196;
+const STACKED_DOCK_HEIGHT = 88;
+const LEFT_EXIT_ROW = 7;
+const RIGHT_EXIT_ROW = 1;
+
 function App() {
 	const [boardWidth, setBoardWidth] = useState(700);
 
@@ -30,14 +37,19 @@ function App() {
 
 	const getCellSize = useCallback(() => boardWidth / VISUAL_BOARD_COLS, [boardWidth]);
 
-	const refreshBoardSize = () => {
-		const horizontalPadding = 32;
-		const verticalPadding = 32;
-		const availableWidth = Math.max(320, window.innerWidth - horizontalPadding);
-		const availableHeight = Math.max(240, window.innerHeight - verticalPadding);
+	const refreshBoardSize = useCallback(() => {
+		const usesStackedControls = window.innerWidth <= STACKED_CONTROLS_BREAKPOINT;
+		const availableWidth = Math.max(
+			320,
+			window.innerWidth - LAYOUT_PADDING - (usesStackedControls ? 0 : SIDE_DOCK_WIDTH)
+		);
+		const availableHeight = Math.max(
+			240,
+			window.innerHeight - LAYOUT_PADDING - (usesStackedControls ? STACKED_DOCK_HEIGHT : 0)
+		);
 		const widthFromHeight = availableHeight * VISUAL_BOARD_ASPECT;
 		setBoardWidth(Math.min(availableWidth, widthFromHeight));
-	};
+	}, []);
 
 	useEffect(() => {
 		dispatch(setBoardType());
@@ -47,11 +59,11 @@ function App() {
 		return () => {
 			window.removeEventListener("resize", refreshBoardSize);
 		};
-	}, [dispatch]);
+	}, [dispatch, refreshBoardSize]);
 
 	useEffect(() => {
 		refreshBoardSize();
-	}, [currentPlayer, pendingPlacement, winner]);
+	}, [currentPlayer, pendingPlacement, refreshBoardSize, winner]);
 
 	useEffect(() => {
 		if (laser.route.length > 0) {
@@ -81,6 +93,20 @@ function App() {
 	const isPlacementActive = Boolean(pendingPlacement);
 	const reserveCount = mirrorReserve[currentPlayer];
 	const canRotate = isPlacementActive || Boolean(selectedPieceLocation);
+	const cellSize = getCellSize();
+	const getExitArrowStyle = useCallback((side) => {
+		const inset = cellSize * 0.14;
+		const size = cellSize - (inset * 2);
+		const rowIndex = side === "left" ? LEFT_EXIT_ROW : RIGHT_EXIT_ROW;
+
+		return {
+			top: (rowIndex * cellSize) + inset,
+			width: size,
+			height: size,
+			left: side === "left" ? inset : "auto",
+			right: side === "right" ? inset : "auto"
+		};
+	}, [cellSize]);
 
 	const winnerLabel = winner ? winner.toUpperCase() : "";
 	const winnerHeadline = winnerReason === WinReasonsEnum.DIAMOND
@@ -109,57 +135,59 @@ function App() {
 				</div>
 			)}
 
-			<div
-				className="board-shell"
-				style={{ width: boardWidth, height: boardHeight }}
-			>
-				<div className="board" ref={stageContainerRef}>
-					<ReactReduxContext.Consumer>
-						{({ store }) => (
-							<Stage
-								key={`stage-${boardWidth}-${boardHeight}`}
-								id="stage"
-								className="stage"
-								width={boardWidth}
-								height={boardHeight}
-							>
-								<Provider store={store}>
-									<BoardLayer
-										reference={stagePiecesRef}
-										cellSize={getCellSize()}
-										onBoardPieceMove={(movement, srcPieceXY) => {
-											if (movement.type === MovementTypesEnum.SPECIAL) {
-												const [destBoardPiece] = stagePiecesRef.current.find(`#${movement.destLocation.an}`);
-												destBoardPiece.to({
-													x: srcPieceXY.x,
-													y: srcPieceXY.y,
-													duration: pieceAnimDuration,
-													easing: pieceAnimEasing
-												});
-											}
+			<div className="play-surface">
+				<div
+					className="board-shell"
+					style={{ width: boardWidth, height: boardHeight }}
+				>
+					<div className="board" ref={stageContainerRef}>
+						<ReactReduxContext.Consumer>
+							{({ store }) => (
+								<Stage
+									key={`stage-${boardWidth}-${boardHeight}`}
+									id="stage"
+									className="stage"
+									width={boardWidth}
+									height={boardHeight}
+								>
+									<Provider store={store}>
+										<BoardLayer
+											reference={stagePiecesRef}
+											cellSize={cellSize}
+											onBoardPieceMove={(movement, srcPieceXY) => {
+												if (movement.type === MovementTypesEnum.SPECIAL) {
+													const [destBoardPiece] = stagePiecesRef.current.find(`#${movement.destLocation.an}`);
+													destBoardPiece.to({
+														x: srcPieceXY.x,
+														y: srcPieceXY.y,
+														duration: pieceAnimDuration,
+														easing: pieceAnimEasing
+													});
+												}
 
-											const delayed = !(movement.type === MovementTypesEnum.ROTATION_CLOCKWISE || movement.type === MovementTypesEnum.ROTATION_C_CLOCKWISE);
-											if (delayed) {
-												setTimeout(() => {
+												const delayed = !(movement.type === MovementTypesEnum.ROTATION_CLOCKWISE || movement.type === MovementTypesEnum.ROTATION_C_CLOCKWISE);
+												if (delayed) {
+													setTimeout(() => {
+														dispatch(applyMovement({ movement: movement.serialize() }));
+													}, 332);
+												} else {
 													dispatch(applyMovement({ movement: movement.serialize() }));
-												}, 332);
-											} else {
-												dispatch(applyMovement({ movement: movement.serialize() }));
-											}
-										}}
-									/>
-								</Provider>
-							</Stage>
-						)}
-					</ReactReduxContext.Consumer>
-				</div>
+												}
+											}}
+										/>
+									</Provider>
+								</Stage>
+							)}
+						</ReactReduxContext.Consumer>
+					</div>
 
-				<button type="button" className="nav-arrow left" aria-label="previous">
-					<span>&larr;</span>
-				</button>
-				<button type="button" className="nav-arrow right" aria-label="next">
-					<span>&rarr;</span>
-				</button>
+					<button type="button" className="nav-arrow left" aria-label="previous" style={getExitArrowStyle("left")}>
+						<span>&larr;</span>
+					</button>
+					<button type="button" className="nav-arrow right" aria-label="next" style={getExitArrowStyle("right")}>
+						<span>&rarr;</span>
+					</button>
+				</div>
 
 				<div className="control-dock">
 					<div className="control-dock-label">Actions</div>

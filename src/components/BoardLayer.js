@@ -18,54 +18,26 @@ import {
     VISUAL_BOARD_ROWS
 } from "../constants/boardLayout";
 
+const BASE_SQUARE_PALETTE = {
+    fill: "#34385B",
+    insetFill: "#434A6B",
+    stroke: "rgba(192, 204, 255, 0.06)",
+    marker: "rgba(243, 247, 255, 0.14)"
+};
+
 const getSquarePalette = (square) => {
     if (isDiamondGoalLocation(square.location)) {
-        return {
-            fill: "#40456B",
-            insetFill: "#4C5384",
-            stroke: "rgba(130, 235, 255, 0.34)",
-            marker: "rgba(144, 232, 255, 0.22)"
-        };
+        return BASE_SQUARE_PALETTE;
     }
 
     switch (square.type) {
         case SquareTypesEnum.LASER_BLUE:
-            return {
-                fill: "#394A87",
-                insetFill: "#5770B8",
-                stroke: "rgba(194, 224, 255, 0.26)",
-                marker: null,
-                skylight: "blue"
-            };
         case SquareTypesEnum.LASER_RED:
-            return {
-                fill: "#6D2F63",
-                insetFill: "#8A4279",
-                stroke: "rgba(255, 203, 225, 0.24)",
-                marker: null,
-                skylight: "red"
-            };
         case SquareTypesEnum.RESERVED_BLUE:
-            return {
-                fill: "#274866",
-                insetFill: "#31617B",
-                stroke: "rgba(126, 228, 255, 0.24)",
-                marker: "rgba(182, 251, 255, 0.2)"
-            };
         case SquareTypesEnum.RESERVED_RED:
-            return {
-                fill: "#5B355A",
-                insetFill: "#6F446C",
-                stroke: "rgba(255, 183, 223, 0.22)",
-                marker: "rgba(248, 205, 232, 0.18)"
-            };
+            return BASE_SQUARE_PALETTE;
         default:
-            return {
-                fill: "#34385B",
-                insetFill: "#434A6B",
-                stroke: "rgba(192, 204, 255, 0.06)",
-                marker: "rgba(243, 247, 255, 0.14)"
-            };
+            return BASE_SQUARE_PALETTE;
     }
 };
 
@@ -78,19 +50,19 @@ const TOP_WINDOWS = [
 ];
 
 const BOOKSHELF_PROPS = [
-    { x: 2.18, y: 1.4, width: 0.72, height: 0.72 },
-    { x: 11.98, y: 1.4, width: 0.72, height: 0.72 },
-    { x: 12.98, y: 3.48, width: 0.72, height: 0.72 },
-    { x: 1.32, y: 5.58, width: 0.72, height: 0.72 },
-    { x: 2.12, y: 7.0, width: 0.72, height: 0.72 },
-    { x: 12.0, y: 7.0, width: 0.72, height: 0.72 }
+    { col: 2, row: 1, width: 0.72, height: 0.72 },
+    { col: 12, row: 1, width: 0.72, height: 0.72 },
+    { col: 13, row: 3, width: 0.72, height: 0.72 },
+    { col: 1, row: 5, width: 0.72, height: 0.72 },
+    { col: 2, row: 7, width: 0.72, height: 0.72 },
+    { col: 12, row: 7, width: 0.72, height: 0.72 }
 ];
 
 const PILLAR_PROPS = [
-    { x: 5.0, y: 1.38 },
-    { x: 8.38, y: 1.38 },
-    { x: 5.0, y: 6.0 },
-    { x: 9.28, y: 6.0 }
+    { col: 5, row: 1 },
+    { col: 8, row: 1 },
+    { col: 5, row: 6 },
+    { col: 9, row: 6 }
 ];
 
 const CENTER_DIAMOND_COL = Math.floor(VISUAL_BOARD_COLS / 2);
@@ -234,8 +206,9 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
     const drawRoomProps = useCallback(() => (
         <Group listening={false}>
             {BOOKSHELF_PROPS.map((prop, index) => {
-                const shelfX = prop.x * cellSize;
-                const shelfY = prop.y * cellSize;
+                const shelfInset = cellSize * 0.14;
+                const shelfX = (prop.col * cellSize) + shelfInset;
+                const shelfY = (prop.row * cellSize) + shelfInset;
                 const shelfWidth = prop.width * cellSize;
                 const shelfHeight = prop.height * cellSize;
 
@@ -278,8 +251,9 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                 );
             })}
             {PILLAR_PROPS.map((prop, index) => {
-                const pillarX = prop.x * cellSize;
-                const pillarY = prop.y * cellSize;
+                const pillarInset = cellSize * 0.14;
+                const pillarX = (prop.col * cellSize) + pillarInset;
+                const pillarY = (prop.row * cellSize) + pillarInset;
                 return (
                     <Group key={`pillar-${index}`} x={pillarX} y={pillarY}>
                         <Rect
@@ -369,12 +343,7 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
         const inset = cellSize * 0.035;
         const markerLen = cellSize * 0.09;
         const cornerLen = cellSize * 0.07;
-        const decorativePalette = {
-            fill: "#34385B",
-            insetFill: "#434A6B",
-            stroke: "rgba(192, 204, 255, 0.06)",
-            marker: "rgba(243, 247, 255, 0.14)"
-        };
+        const decorativePalette = BASE_SQUARE_PALETTE;
 
         return Array.from({ length: VISUAL_BOARD_ROWS }, (_, rowIndex) => (
             Array.from({ length: VISUAL_BOARD_COLS }, (_, colIndex) => {
@@ -406,20 +375,6 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
                         type: SquareTypesEnum.LASER_BLUE,
                         location: null
                     });
-                } else if (!activeSquare && colIndex <= 1) {
-                    palette = {
-                        ...decorativePalette,
-                        fill: "#5B355A",
-                        insetFill: "#6F446C",
-                        stroke: "rgba(255, 183, 223, 0.12)"
-                    };
-                } else if (!activeSquare && colIndex >= VISUAL_BOARD_COLS - 2) {
-                    palette = {
-                        ...decorativePalette,
-                        fill: "#274866",
-                        insetFill: "#31617B",
-                        stroke: "rgba(126, 228, 255, 0.14)"
-                    };
                 }
 
                 const baseX = Location.getX(colIndex, cellSize, false);
