@@ -160,6 +160,32 @@ describe("laser blocker resolution", () => {
 });
 
 describe("mirror deployment rules", () => {
+    it("does not mutate caller-owned board data while moving the burglar", () => {
+        const sourceBoard = new Board();
+        const sourceOffboardPieces = sourceBoard.offboardPieces;
+        const board = new Board({
+            squares: sourceBoard.squares,
+            offboardPieces: sourceOffboardPieces
+        });
+
+        board.applyMovement({
+            type: MovementTypesEnum.NORMAL,
+            srcLocation: BLUE_HIDEOUT_LOCATION,
+            destLocation: new Location(11, 3).serialize()
+        });
+
+        const sourceHideoutSquare = sourceOffboardPieces.find((square) => {
+            return square.location.colIndex === BLUE_HIDEOUT_LOCATION.colIndex &&
+                square.location.rowIndex === BLUE_HIDEOUT_LOCATION.rowIndex;
+        });
+        const sourceExitSquare = sourceOffboardPieces.find((square) => {
+            return square.location.colIndex === 11 && square.location.rowIndex === 3;
+        });
+
+        expect(sourceHideoutSquare?.piece?.type).toBe(PieceTypesEnum.KING);
+        expect(sourceExitSquare?.piece).toBeNull();
+    });
+
     it("allows reserve mirrors on empty visible squares without room props", () => {
         const board = new Board();
 

@@ -7,6 +7,14 @@ const initialMirrorReserve = () => ({
     [PlayerTypesEnum.RED]: MIRROR_RESERVE_COUNT
 });
 
+const applySerializedBoard = (state, serializedBoard) => {
+    state.winner = serializedBoard.winner || "";
+    state.winnerReason = serializedBoard.winnerReason;
+    state.sn = serializedBoard.sn;
+    state.squares = serializedBoard.squares;
+    state.offboardPieces = serializedBoard.offboardPieces;
+};
+
 
 const gameSlice = createSlice({
     name: "game",
@@ -42,11 +50,7 @@ const gameSlice = createSlice({
          */
         setBoardType: (state, action) => {
             const newBoard = new Board(action.payload).serialize();
-            state.squares = newBoard.squares;
-            state.offboardPieces = newBoard.offboardPieces;
-            state.winner = newBoard.winner || "";
-            state.winnerReason = newBoard.winnerReason;
-            state.sn = newBoard.sn;
+            applySerializedBoard(state, newBoard);
             state.mirrorReserve = initialMirrorReserve();
             state.pendingPlacement = null;
             state.selectedPieceLocation = null;
@@ -68,12 +72,8 @@ const gameSlice = createSlice({
 
             newBoard.applyMovement(movement);
             const serializedBoard = newBoard.serialize();
+            applySerializedBoard(state, serializedBoard);
             if (serializedBoard.winner) {
-                state.winner = serializedBoard.winner || "";
-                state.winnerReason = serializedBoard.winnerReason;
-                state.sn = serializedBoard.sn;
-                state.squares = serializedBoard.squares;
-                state.offboardPieces = serializedBoard.offboardPieces;
                 state.status = GameStatusEnum.GAME_OVER;
                 state.laser.route = [];
                 state.laser.finalActionType = null;
@@ -139,6 +139,7 @@ const gameSlice = createSlice({
             newBoard.deployPiece(location, pieceType, playerType, orientation);
             state.pendingPlacement = null;
             state.mirrorReserve[playerType] -= 1;
+            applySerializedBoard(state, newBoard.serialize());
 
             const route = newBoard.getLaserRoute(state.currentPlayer);
             state.laser.triggered = true;
@@ -167,11 +168,7 @@ const gameSlice = createSlice({
             }
             const serializedBoard = newBoard.serialize();
 
-            state.winner = serializedBoard.winner || "";
-            state.winnerReason = serializedBoard.winnerReason;
-            state.sn = serializedBoard.sn;
-            state.squares = serializedBoard.squares;
-            state.offboardPieces = serializedBoard.offboardPieces;
+            applySerializedBoard(state, serializedBoard);
 
             // Check if game over
             if (serializedBoard.winner) {
@@ -243,10 +240,7 @@ const gameSlice = createSlice({
             state.sn = DEFAULT_BOARD_SN;
             state.currentPlayer = PlayerTypesEnum.BLUE;
             state.status = GameStatusEnum.PLAYING;
-            state.winner = "";
-            state.winnerReason = null;
-            state.squares = newBoard.squares;
-            state.offboardPieces = newBoard.offboardPieces;
+            applySerializedBoard(state, newBoard);
             state.mirrorReserve = initialMirrorReserve();
             state.pendingPlacement = null;
             state.selectedPieceLocation = null;

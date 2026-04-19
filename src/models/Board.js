@@ -184,8 +184,9 @@ class Board {
         // Parse the options
         options = options || {};
         if (options.squares) {
-            // If squares is provided, prioritize this
-            this.squares = options.squares;
+            // If squares is provided, prioritize this.
+            // Clone the input so board operations never mutate caller-owned state.
+            this.squares = cloneDeep(options.squares);
 
         } else if (options.setupNotation) {
             // If setupNotation is provided parse it and set the parsed squares.
@@ -196,7 +197,7 @@ class Board {
             this.squares = SN.parse(DEFAULT_BOARD_SN);
         }
         if (options.offboardPieces) {
-            this.offboardPieces = options.offboardPieces;
+            this.offboardPieces = cloneDeep(options.offboardPieces);
         } else {
             const includeHideoutKings = !options.squares && (!options.setupNotation || options.setupNotation === DEFAULT_BOARD_SN);
             this.offboardPieces = createOffboardSquares(this.squares, includeHideoutKings);
