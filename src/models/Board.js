@@ -369,7 +369,7 @@ class Board {
                         direction = action.newDirection;
 
                     } else if (action.type === LaserActionTypesEnum.NOTHING) {
-                        // The piece in this square is probably (1) another laser or (2) a defender
+                        // The piece in this square is probably (1) another laser, (2) a defender or (3) the blocking side of a deflector
                         // So, do nothing! Stop the laser now.
                         eventType = LaserEventsEnum.END;
                     }

@@ -66,8 +66,8 @@ Each player has one Laser that remains in the corner of the game board throughto
 
 ### Deflector
 
-The mirrored side of the Deflector reflects the laser _90 degrees_.
-A Deflector is eliminated from play when any of it's non-mirrored surfaces are hit by the laser.
+The white mirrored side of the Deflector reflects the laser _90 degrees_.
+Its non-mirrored sides stop the laser, and the Deflector remains in play.
 
 ### Defender
 

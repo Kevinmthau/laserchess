@@ -67,6 +67,47 @@ describe("laser blocker resolution", () => {
         expect(store.getState().game.squares[6][8].piece).not.toBeNull();
     });
 
+    it("keeps a deflector after its non-reflective side blocks the red laser", () => {
+        const board = new Board({ setupNotation: "l+1b7/*/*/*/*/*/*/9L+++" });
+
+        const route = board.getLaserRoute(PlayerTypesEnum.RED);
+        const finalLaserPath = route[route.length - 1];
+        board.applyLaser(PlayerTypesEnum.RED);
+
+        expect(finalLaserPath.location).toEqual(Location.fromAN("c8").serialize());
+        expect(finalLaserPath.actionType).toBe(LaserActionTypesEnum.NOTHING);
+        expect(board.getSquare(Location.fromAN("c8")).piece).not.toBeNull();
+    });
+
+    it("redirects the red laser when it hits the deflector's white face", () => {
+        const board = new Board({ setupNotation: "l+1b+++7/*/*/*/*/*/*/9L+++" });
+
+        const route = board.getLaserRoute(PlayerTypesEnum.RED);
+        const deflectPathIndex = route.findIndex((path) => path.location.an === "c8");
+        board.applyLaser(PlayerTypesEnum.RED);
+
+        expect(route[deflectPathIndex]?.location).toEqual(Location.fromAN("c8").serialize());
+        expect(route[deflectPathIndex]?.actionType).toBe(LaserActionTypesEnum.DEFLECT);
+        expect(route[deflectPathIndex + 1]?.location).toEqual(new Location(2, -1).serialize());
+        expect(board.getSquare(Location.fromAN("c8")).piece).not.toBeNull();
+    });
+
+    it("redirects the blue laser upward when it hits the white face from the right", () => {
+        const board = new Board();
+        board.deployPiece(new Location(4, 8).serialize(), PieceTypesEnum.DEFLECTOR, PlayerTypesEnum.BLUE, 0);
+
+        const route = board.getLaserRoute(PlayerTypesEnum.BLUE);
+        const deflectPathIndex = route.findIndex((path) => {
+            return path.location.colIndex === 4 && path.location.rowIndex === 8;
+        });
+        board.applyLaser(PlayerTypesEnum.BLUE);
+
+        expect(route[deflectPathIndex]?.location).toEqual(new Location(4, 8).serialize());
+        expect(route[deflectPathIndex]?.actionType).toBe(LaserActionTypesEnum.DEFLECT);
+        expect(route[deflectPathIndex + 1]?.location).toEqual(Location.fromAN("e1").serialize());
+        expect(board.getSquare(new Location(4, 8).serialize()).piece).not.toBeNull();
+    });
+
     it("does not remove a blocker when finishing movement from stored laser state", () => {
         const boardState = gameReducer(undefined, setBoardType({ setupNotation: "l++9/*/*/*/*/*/8D1/9L" }));
 
@@ -82,9 +123,22 @@ describe("laser blocker resolution", () => {
         expect(finishedState.squares[6][8].piece).not.toBeNull();
     });
 
+    it("keeps a deflector through the reducer finishMovement flow when it blocks", () => {
+        const store = configureStore({
+            reducer: {
+                game: gameReducer
+            }
+        });
+
+        store.dispatch(setBoardType({ setupNotation: "l+1b7/*/*/*/*/*/*/9L+++" }));
+        store.dispatch(finishMovement());
+
+        expect(store.getState().game.squares[0][2].piece).not.toBeNull();
+    });
+
     it("stops the laser on an active-board room object", () => {
         const board = new Board({ setupNotation: "l+9/*/*/*/*/*/*/9L+++" });
-        board.deployPiece(Location.fromAN("d8").serialize(), PieceTypesEnum.DEFLECTOR, PlayerTypesEnum.RED, 0);
+        board.deployPiece(Location.fromAN("d8").serialize(), PieceTypesEnum.DEFLECTOR, PlayerTypesEnum.RED, 180);
 
         const route = board.getLaserRoute(PlayerTypesEnum.RED);
         const finalLaserPath = route[route.length - 1];
@@ -95,7 +149,7 @@ describe("laser blocker resolution", () => {
 
     it("stops the laser on an outer-ring room object", () => {
         const board = new Board({ setupNotation: "l+9/*/*/*/*/*/*/9L+++" });
-        board.deployPiece(new Location(10, 0).serialize(), PieceTypesEnum.DEFLECTOR, PlayerTypesEnum.RED, 0);
+        board.deployPiece(new Location(10, 0).serialize(), PieceTypesEnum.DEFLECTOR, PlayerTypesEnum.RED, 180);
 
         const route = board.getLaserRoute(PlayerTypesEnum.RED);
         const finalLaserPath = route[route.length - 1];
