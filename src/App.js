@@ -10,6 +10,7 @@ import Board from "./models/Board";
 import { IconButton } from "@material-ui/core";
 import RotateLeftIcon from "@material-ui/icons/RotateLeft";
 import RotateRightIcon from "@material-ui/icons/RotateRight";
+import AccessTimeIcon from "@material-ui/icons/AccessTime";
 import Movement from "./models/Movement";
 
 const BOARD_COLS = 10;
@@ -86,6 +87,9 @@ function App() {
 	const isPlacementActive = Boolean(pendingPlacement);
 	const reserveCount = mirrorReserve[currentPlayer];
 	const canRotate = isPlacementActive || Boolean(selectedPieceLocation);
+	const roundsLeft = 15;
+	const movesLeft = 3;
+	const moveTimerSeconds = 30;
 
 	const winnerLabel = winner ? winner.toUpperCase() : "";
 	const winnerHeadline = winnerReason === WinReasonsEnum.DIAMOND
@@ -118,6 +122,11 @@ function App() {
 				className="board-shell"
 				style={{ width: boardWidth, height: boardHeight }}
 			>
+				<div className="round-counter">
+					<strong>{roundsLeft}</strong>
+					<span>Rounds Left</span>
+				</div>
+
 				<div className="board" ref={stageContainerRef}>
 					<ReactReduxContext.Consumer>
 						{({ store }) => (
@@ -158,16 +167,6 @@ function App() {
 					</ReactReduxContext.Consumer>
 				</div>
 
-				<div className="overlay-badge laser-badge top-right">
-					<span className="laser-dot" />
-					<span>Laser is<br />Charging</span>
-				</div>
-
-				<div className="overlay-badge laser-badge bottom-left">
-					<span className="laser-dot" />
-					<span>Laser is<br />Charging</span>
-				</div>
-
 				<button type="button" className="nav-arrow left" aria-label="previous">
 					<span>&larr;</span>
 				</button>
@@ -176,10 +175,21 @@ function App() {
 				</button>
 
 				<div className={`team-banner ${teamAccent}`}>
-					<div className="team-banner-text">
+					<div className="team-banner-main">
 						<h4>{teamName}</h4>
+						<div className="team-banner-subline">
+							<span>{movesLeft} Moves Left</span>
+							<span className="timer-pill">
+								<AccessTimeIcon />
+								{moveTimerSeconds}
+							</span>
+						</div>
 					</div>
-					<div className="team-banner-controls">
+				</div>
+
+				<div className="control-dock">
+					<div className="control-dock-label">Actions</div>
+					<div className="control-dock-buttons">
 						<button
 							type="button"
 							className={`mirror-reserve-btn ${isPlacementActive ? "is-active" : ""}`}
