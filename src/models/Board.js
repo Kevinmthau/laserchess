@@ -16,7 +16,7 @@ import { pieceAnimDuration, pieceAnimEasing } from "../components/BoardPiece";
  * @constant
  * Ace
  */
-export const DEFAULT_BOARD_SN = "l++9/*/*/*/*/*/*/9L";
+export const DEFAULT_BOARD_SN = "l+9/*/*/*/*/*/*/9L+++";
 export const MIRROR_RESERVE_COUNT = 3;
 
 export const DIAMOND_GOAL_ANS = Object.freeze(["e5", "f5", "e4", "f4"]);

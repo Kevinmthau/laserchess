@@ -1,6 +1,6 @@
 import React, { useCallback } from "react";
 import { Circle, Group, Layer, Line, Rect, RegularPolygon } from "react-konva";
-import { LaserActionTypesEnum, PieceTypesEnum, PlayerTypesEnum, SquareTypesEnum } from "../models/Enums";
+import { LaserActionTypesEnum, LaserDirectionsEnum, PieceTypesEnum, PlayerTypesEnum, SquareTypesEnum } from "../models/Enums";
 import Location from "../models/Location";
 import { useDispatch, useSelector } from "react-redux";
 import BoardPiece, { pieceAnimDuration, pieceAnimEasing } from "./BoardPiece";
@@ -636,10 +636,43 @@ const BoardLayer = ({ reference, cellSize, onBoardPieceMove }) => {
 
         if (linePoints && linePoints.length >= 2 && laser.route.length > 0) {
             const startPath = laser.route[0];
-            if (startPath.location?.an === "a8") {
+            const startAn = startPath.location?.an;
+            const isStraightShot = (startAn === "a8" || startAn === "j1") && laser.route.every((path, index) => {
+                return index === 0 || path.actionType === LaserActionTypesEnum.NOTHING;
+            });
+
+            if (isStraightShot) {
+                const startX = startAn === "a8"
+                    ? Location.getX(-ACTIVE_BOARD_COL_OFFSET, cellSize)
+                    : Location.getX(VISUAL_BOARD_COLS - ACTIVE_BOARD_COL_OFFSET - 1, cellSize);
+                const startY = startAn === "a8"
+                    ? Location.getY(-ACTIVE_BOARD_ROW_OFFSET, cellSize)
+                    : Location.getY(VISUAL_BOARD_ROWS - ACTIVE_BOARD_ROW_OFFSET - 1, cellSize);
+                let endX = startX;
+                let endY = startY;
+
+                switch (startPath.direction) {
+                    case LaserDirectionsEnum.TOP:
+                        endY = -ACTIVE_BOARD_ROW_OFFSET * cellSize;
+                        break;
+                    case LaserDirectionsEnum.RIGHT:
+                        endX = (VISUAL_BOARD_COLS - ACTIVE_BOARD_COL_OFFSET) * cellSize;
+                        break;
+                    case LaserDirectionsEnum.BOTTOM:
+                        endY = (VISUAL_BOARD_ROWS - ACTIVE_BOARD_ROW_OFFSET) * cellSize;
+                        break;
+                    case LaserDirectionsEnum.LEFT:
+                        endX = -ACTIVE_BOARD_COL_OFFSET * cellSize;
+                        break;
+                    default:
+                        break;
+                }
+
+                linePoints.splice(0, linePoints.length, startX, startY, endX, endY);
+            } else if (startAn === "a8") {
                 linePoints[0] = Location.getX(-ACTIVE_BOARD_COL_OFFSET, cellSize);
                 linePoints[1] = Location.getY(-ACTIVE_BOARD_ROW_OFFSET, cellSize);
-            } else if (startPath.location?.an === "j1") {
+            } else if (startAn === "j1") {
                 linePoints[0] = Location.getX(VISUAL_BOARD_COLS - ACTIVE_BOARD_COL_OFFSET - 1, cellSize);
                 linePoints[1] = Location.getY(VISUAL_BOARD_ROWS - ACTIVE_BOARD_ROW_OFFSET - 1, cellSize);
             }
