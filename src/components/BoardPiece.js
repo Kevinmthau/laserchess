@@ -9,6 +9,7 @@ import Board from "../models/Board";
 import BlueBurglarSVG from "../assets/pieces/blue-burglar.svg";
 import RedBurglarSVG from "../assets/pieces/red-burglar.svg";
 import DeflectorDirectionOverlay from "./DeflectorDirectionOverlay";
+import { recordClientError, setDebugSnapshot } from "../utils/debug";
 import {
 	ACTIVE_BOARD_COL_OFFSET,
 	ACTIVE_BOARD_ROW_OFFSET,
@@ -125,12 +126,28 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 					// Handle piece drag and dropping by snapping it to the grid.
 					const rawEndX = e.target.x(); // the final X position
 					const rawEndY = e.target.y(); // the final Y position
+					const dragContext = {
+						piece: {
+							type: piece.type,
+							color: piece.color,
+							orientation: piece.orientation,
+							imageName: piece.imageName
+						},
+						currentPlayer,
+						location: location.serialize(),
+						startXY: { x: startX, y: startY },
+						rawEndXY: { x: rawEndX, y: rawEndY },
+						fallbackXY,
+						cellSize
+					};
+					setDebugSnapshot("lastDragAttempt", dragContext);
 					if (
 						!Number.isFinite(rawEndX) ||
 						!Number.isFinite(rawEndY) ||
 						!Number.isFinite(startX) ||
 						!Number.isFinite(startY)
 					) {
+						recordClientError("boardpiece-drag-invalid-coordinates", dragContext);
 						resetToPosition(e.target, fallbackXY.x, fallbackXY.y);
 						const container = e.target.getStage().container();
 						container.style.cursor = "grab";
@@ -146,6 +163,12 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 					if (hasChangedLocation) {
 						const srcLocation = Location.fromXY(startX, startY, cellSize);
 						const destLocation = Location.fromXY(endX, endY, cellSize);
+						setDebugSnapshot("lastDragAttempt", {
+							...dragContext,
+							snappedEndXY: { x: endX, y: endY },
+							srcLocation: srcLocation.serialize(),
+							destLocation: destLocation.serialize()
+						});
 
 						// Validate!
 						// Check if the destLocation square is a neighbor of the srcLocation.
@@ -215,8 +238,30 @@ const BoardPiece = ({ id, square: { piece, location }, squares, offboardPieces, 
 						resetToPosition(e.target, endX, endY);
 					}
 				} catch (error) {
+					recordClientError("boardpiece-drag-error", {
+						piece: {
+							type: piece.type,
+							color: piece.color,
+							orientation: piece.orientation,
+							imageName: piece.imageName
+						},
+						currentPlayer,
+						location: location.serialize(),
+						lastXY,
+						fallbackXY,
+						cellSize,
+						error
+					});
 					resetToPosition(e.target, fallbackXY.x, fallbackXY.y);
-					console.error("BoardPiece drag interaction failed", error);
+					console.error("BoardPiece drag interaction failed", {
+						error,
+						piece,
+						location,
+						lastXY,
+						fallbackXY,
+						cellSize,
+						currentPlayer
+					});
 				}
 
 				const container = e.target.getStage().container();

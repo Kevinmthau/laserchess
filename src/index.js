@@ -5,7 +5,9 @@ import "array-flat-polyfill";
 import App from "./App";
 import store from "./redux/store";
 import { Provider } from "react-redux";
+import { installGlobalErrorLogging } from "./utils/debug";
 
+installGlobalErrorLogging();
 
 
 ReactDOM.render(
